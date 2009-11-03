@@ -4,7 +4,7 @@ This language is a patchwork of several other language's concepts. They are:
 - Aesthetics: The idea is to take the premise of Lisp and TCL (everything is a tuple, everything is a string respectively)
      and their ability to have an extremely simple parser. At the same time, have the language look a little more traditional 
      and familiar to users of languages like C and Ruby. Ideally, it'll be possible to do Lisp-style code manipulations and 
-     TCL-style DSMs without a lot of extra work.
+     TCL-style DSLs without a lot of extra work.
 - Object Model: Pretty much exactly Ruby's. Objects are instances of classes which have metaclasses etc.
 - Execution Model: Based, in a way, on PHP. The idea is that the execution environment will allow you to fork the VM state
      (including all object state, stack state, etc. But not external resources) and then throw away that fork. This
