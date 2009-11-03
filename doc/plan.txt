@@ -1,0 +1,5 @@
+Stage 1: Ruby parser, execution simply proxying to ruby calls
+Stage 2: C parser (probably not using parser generator), execution still passing through to ruby interpreter
+Stage 3: C parser, custom execution engine
+Stage 4: ...
+Stage 5: Profit.

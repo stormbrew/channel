@@ -1,3 +1,19 @@
+Channel Language Concept Document
+---
+This language is a patchwork of several other language's concepts. They are:
+- Aesthetics: The idea is to take the premise of Lisp and TCL (everything is a tuple, everything is a string respectively)
+     and their ability to have an extremely simple parser. At the same time, have the language look a little more traditional 
+     and familiar to users of languages like C and Ruby. Ideally, it'll be possible to do Lisp-style code manipulations and 
+     TCL-style DSMs without a lot of extra work.
+- Object Model: Pretty much exactly Ruby's. Objects are instances of classes which have metaclasses etc.
+- Execution Model: Based, in a way, on PHP. The idea is that the execution environment will allow you to fork the VM state
+     (including all object state, stack state, etc. But not external resources) and then throw away that fork. This
+     allows for a framework to fork for a request and then terminate the forked handler after the request is done, along
+     with all cruft generated in the request. It is essentially a way of short-circuiting the garbage collection of an
+     entire request. The forked processes will also resemble Erlang's concept of threading (see threading model below)
+- Threading Model: Forked processes will be isolated from each other and message passing (like Erlang's) will be
+     the only means to communicate between them.
+
 # Procedural code
 function blah(arg1, arg2, arg3) do: { # meta-definition of function: function function(name, args) do: {...}
 	if (arg1 == arg2) then: {
