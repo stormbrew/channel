@@ -1,0 +1,42 @@
+# Procedural code
+function blah(arg1, arg2, arg3) do: { # meta-definition of function: function function(name, args) do: {...}
+	if (arg1 == arg2) then: {
+		echo("boom")
+	} else: {
+		echo(arg3)
+	}
+}
+
+blah(1, 2, 3) # => "boom"
+blah(1, 1, 2) # => "2"
+
+# Object code
+class Blah define: { # meta-definition of class function: function class(name) do: {...}
+	function blah(arg1, arg2) do: {
+		echo(arg1)
+		@tmp = arg2
+	}
+	function blorp() do: {
+		echo(@tmp)
+	}
+}
+x = Blah.new
+x.blah("blorp", "bloom") # => "blorp"
+x.blorp() # => "bloom"
+
+
+# Anonymous functions
+x = proc(arg) do: { echo(arg) }
+x.call("blah") # => "blah"
+x("blah") # => "blah" -- shortcut invocation is only a possibility at this point. Logistics need to be figured out.
+
+All code is tuples
+Two kinds of tuples:
+- {} tuples are \n separated, intended to be used for code. Only bare, top level returns move to next item though
+- () tuples are , separated, intended to be used for lists (including argument lists). Again, only bare, top level commas move to next item.
+A 'file' is implicitly within a {} tuple set.
+Tuples can be labeled with a symbol + : pair before the start of the tuple.
+All control structures done through blocks. Unlike ruby, trivial to pass multiple blocks to function via labelled tuples.
+Bare words in code are called symbols and are first class objects
+Special characters in language are: (){}:, -- they cannot naturally be part of a bareword value.
+Object method invocation taken care of at a higher level. '.' as a method signature not special, just part of symbol to parser.
