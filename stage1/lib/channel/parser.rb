@@ -14,6 +14,9 @@ module Channel
 			end
 		end
 		
+		# A tuple is a set of values separated by spaces in the input document.
+		# Tuples are (almost?) always part of a TupleSet, which is either a 
+		# comma or \n separated set of tuples.
 		class Tuple
 			attr_reader :values
 			
@@ -62,6 +65,10 @@ module Channel
 			end
 		end
 		
+		# A tuple set is a container of tuples (see above). These are usually
+		# surrounded by a {} or (), depending on what type of tuple set they
+		# are (usually based on context). A .ch file is also a special case
+		# of a tuple set. 
 		class TupleSet
 			attr_reader :tuples
 			
@@ -110,6 +117,8 @@ module Channel
 			end
 		end
 		
+		# A string constant is a quoted string of arbitrary length and
+		# content. It's surrounded by either "s or 's.
 		class StringConstant
 			def string
 				@string.string
@@ -148,6 +157,10 @@ module Channel
 			end
 		end
 		
+		# A bareword is a short, whitespace or symbol separated,
+		# string that can be used either as a control term by the
+		# underlying language or as just a special string by the 
+		# code itself.
 		class BareWord
 			def string
 				@string.string
@@ -171,6 +184,9 @@ module Channel
 			end
 		end
 		
+		# A reference is similar to a bareword, except is prefixed
+		# by a $ or @ symbol. It is expected to be used to identify
+		# variable use in the language.
 		class Reference
 		  attr_reader :type
 		  def string
