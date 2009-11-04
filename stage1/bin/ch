@@ -1,5 +1,9 @@
 #!/usr/bin/env ruby
-require 'lib/channel/parser'
+if ($0 == 'bin/ch')
+  $: << "lib"
+end
+
+require 'channel/parser'
 
 tree = nil
 
