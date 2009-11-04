@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+require 'lib/channel/parser'
+
+tree = nil
+
+if (ARGV[0])
+	File.open(ARGV[0]) {|f|
+		tree = Channel::Parser::Tree.parse(f)
+	}
+else
+	tree = Channel::Parser::Tree.parse($stdin)
+end
+
+puts tree.inspect_r
