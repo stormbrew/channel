@@ -9,6 +9,7 @@ module Channel
 			when '(' then TupleSet.new(:comma)
 			when '"' then StringConstant.new(:complex)
 			when "'" then StringConstant.new(:simple)
+		  when '$', '@' then Reference.new(char) 
 			else BareWord.new(char)
 			end
 		end
@@ -169,6 +170,30 @@ module Channel
 				return "#{' '*l}BareWord[#{@string.string}]"
 			end
 		end
+		
+		class Reference
+		  attr_reader :type
+		  def string
+		    @string.string
+	    end
+	    
+	    def initialize(type)
+	      @type = type
+	      @string = StringIO.new
+      end
+      def next(char)
+        case char
+        when 'a'..'z', 'A'..'Z', '0'..'9', '_'
+          @string << char
+          return false
+        else
+          return char
+        end
+      end
+      def inspect_r(l = 0)
+        return "#{' '*l}Reference[#{@type}#{@string.string}]"
+      end
+    end
 		
 		class Tree < TupleSet
 			def initialize()
