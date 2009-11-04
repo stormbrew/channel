@@ -121,9 +121,19 @@ module Channel
 					when :complex then '"'
 					end
 				@string = StringIO.new()
+				@escape = false
 			end
 			def next(char)
+				if (@escape)
+					@string << char
+					@escape = false
+					return false
+				end
+				
 				case char
+				when "\\"
+					@escape = true
+					return false
 				when @terminator
 					return :done # hit the end of the string
 				else

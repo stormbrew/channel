@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-if ($0 == 'bin/ch')
+if ($0 =~ %r{bin/ch$})
   $: << "lib"
 end
 
