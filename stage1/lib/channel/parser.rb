@@ -35,6 +35,7 @@ module Channel
 		# Tuples are (almost?) always part of a TupleSet, which is either a 
 		# comma or \n separated set of tuples.
 		class Tuple < Node
+			attr_reader :type
 			attr_reader :values
 			
 			def initialize(values = [], type = :comma)
@@ -47,6 +48,9 @@ module Channel
 				@terminator = terminator
 				
 				@current_value = nil
+			end
+			def ==(other)
+				@type == other.type && @values == other.values
 			end
 			def next(char)
 				if (@current_value)
@@ -90,7 +94,7 @@ module Channel
 		# are (usually based on context). A .ch file is also a special case
 		# of a tuple set. 
 		class TupleSet < Node
-			attr_reader :tuples
+			attr_reader :type, :tuples
 			
 			def initialize(tuples = [], type = :comma)
 				@type = type
@@ -111,6 +115,9 @@ module Channel
 				end
 				@tuples = []
 				@current_tuple = Tuple.new_parser(@type, @splitter, @terminator)
+			end
+			def ==(other)
+				@type == other.type && @tuples == other.tuples
 			end
 			def next(char)
 				if (@current_tuple)
@@ -147,6 +154,7 @@ module Channel
 			def string
 				@string.string
 			end
+			attr_reader :type
 			
 			def initialize(string = "", type = :complex)
 				@string = StringIO.new
@@ -161,6 +169,9 @@ module Channel
 					end
 				@string = StringIO.new()
 				@escape = false
+			end
+			def ==(other)
+				string == other.string && type == other.type
 			end
 			def next(char)
 				if (@escape)
@@ -205,6 +216,9 @@ module Channel
 				@string = StringIO.new
 				@string << first_char if (first_char)
 			end
+			def ==(other)
+				type == other.type && string == other.string
+			end
 			def next(char)
 				case char
 				when ' ', "\t", "\n", '(', ')', '{', '}', ',', nil
@@ -237,6 +251,9 @@ module Channel
 	      @type = type
 	      @string = StringIO.new
       end
+			def ==(other)
+				type == other.type && string == other.string
+			end
       def next(char)
         case char
         when 'a'..'z', 'A'..'Z', '0'..'9', '_'
