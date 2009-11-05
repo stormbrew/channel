@@ -89,7 +89,7 @@ module Channel
 				
 				# otherwise, figure out what the next node is.
 				@current_value = Node::node_type_from_first_character(char)
-				@current_value.read(char)
+				@current_value.next(char)
 				return false
 			end
 			def inspect_r(l = 0)
