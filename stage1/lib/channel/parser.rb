@@ -237,7 +237,7 @@ module Channel
 			end
 			def next(char)
 				case char
-				when ' ', "\t", "\n", '(', ')', '{', '}', ',', nil
+				when ' ', "\t", "\n", '(', ')', '{', '}', ',', '"', "'", '$', '@', nil
 					return char # hit a termination case for a bareword
 				else
 					@string << char
