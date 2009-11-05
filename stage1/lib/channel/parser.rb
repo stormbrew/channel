@@ -8,14 +8,27 @@ module Channel
 		class Node
 		  def self.node_type_from_first_character(char)
   			return case char
-  			when '{' then TupleSet.new(:line)
-  			when '(' then TupleSet.new(:comma)
-  			when '"' then StringConstant.new(:complex)
-  			when "'" then StringConstant.new(:simple)
-  		  when '$', '@' then Reference.new(char) 
-  			else BareWord.new(char)
+  			when '{' then TupleSet.new_parser(:line)
+  			when '(' then TupleSet.new_parser(:comma)
+  			when '"' then StringConstant.new_parser(:complex)
+  			when "'" then StringConstant.new_parser(:simple)
+  		  when '$', '@' then Reference.new_parser(char) 
+  			else BareWord.new_parser(char)
   			end
   		end
+
+			# Use this to initialize a new parser instance of the 
+			# node. Calls initialize_parser() after normal initialization.
+			# Initialize() of all parser derivatives should at least be
+			# able to take 0 arguments, but should otherwise be usable
+			# to construct nodes for comparison or tree manipulation.
+			def Node.new_parser(*args)
+				x = self.new
+				x.initialize_parser(*args)
+				return x
+			end
+			
+			def initialize_parser(); end
 	  end
 		
 		# A tuple is a set of values separated by spaces in the input document.
@@ -24,12 +37,15 @@ module Channel
 		class Tuple < Node
 			attr_reader :values
 			
-			def initialize(type, splitter, terminator)
+			def initialize(values = [], type = :comma)
+				@type = type
+				@values = values
+			end
+			def initialize_parser(type, splitter, terminator)
 				@type = type
 				@splitter = splitter
 				@terminator = terminator
 				
-				@values = []
 				@current_value = nil
 			end
 			def next(char)
@@ -76,7 +92,11 @@ module Channel
 		class TupleSet < Node
 			attr_reader :tuples
 			
-			def initialize(type)
+			def initialize(tuples = [], type = :comma)
+				@type = type
+				@tuples = tuples
+			end
+			def initialize_parser(type)
 				@type = type
 				case type
 				when :file
@@ -90,7 +110,7 @@ module Channel
 					@terminator = ')'
 				end
 				@tuples = []
-				@current_tuple = Tuple.new(@type, @splitter, @terminator)
+				@current_tuple = Tuple.new_parser(@type, @splitter, @terminator)
 			end
 			def next(char)
 				if (@current_tuple)
@@ -98,7 +118,7 @@ module Channel
 					return false if (status == false)
 					
 					@tuples << @current_tuple
-					@current_tuple = Tuple.new(@type, @splitter, @terminator)
+					@current_tuple = Tuple.new_parser(@type, @splitter, @terminator)
 					return false if (status == :done) # no character was passed back, so do nothing 'til the next character
 					char = status # if we get here, a character was passed back so process it.
 				end
@@ -128,7 +148,12 @@ module Channel
 				@string.string
 			end
 			
-			def initialize(type)
+			def initialize(string = "", type = :complex)
+				@string = StringIO.new
+				@string << string
+				@type = type
+			end
+			def initialize_parser(type)
 				@type = type
 				@terminator = case type
 					when :simple then "'"
@@ -172,7 +197,11 @@ module Channel
 				@string.string
 			end
 			
-			def initialize(first_char = nil)
+			def initialize(string = "")
+				@string = StringIO.new
+				@string << string
+			end
+			def initialize_parser(first_char = nil)
 				@string = StringIO.new
 				@string << first_char if (first_char)
 			end
@@ -199,7 +228,12 @@ module Channel
 		    @string.string
 	    end
 	    
-	    def initialize(type)
+			def initialize(string = "", type = '$')
+				@type = type
+				@string = StringIO.new
+				@string << string
+			end
+	    def initialize_parser(type)
 	      @type = type
 	      @string = StringIO.new
       end
@@ -218,7 +252,7 @@ module Channel
     end
 		
 		class Tree < TupleSet
-			def initialize()
+			def initialize_parser()
 				super(:file)
 			end
 			
@@ -226,7 +260,7 @@ module Channel
 			# with the full graph of the input.
 			def Tree.parse(input_stream)
 				# always start a stream in the line tuple mode.
-				tree = self.new
+				tree = self.new_parser
 
 				input_stream.each_byte {|b|
 					c = b.chr
