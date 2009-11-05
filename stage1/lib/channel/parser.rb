@@ -29,6 +29,22 @@ module Channel
 			end
 			
 			def initialize_parser(); end
+
+			# Takes an input stream and returns a parse Tree object 
+			# with the full graph of the input.
+			def Node.parse(input_stream)
+				# always start a stream in the line tuple mode.
+				node = self.new_parser
+
+				input_stream.each_byte {|b|
+					c = b.chr
+					if (node.next(c))
+						return node # early finish, bail out.
+					end
+				}
+				node.next(nil)
+				return node
+			end
 	  end
 		
 		# A tuple is a set of values separated by spaces in the input document.
@@ -271,20 +287,6 @@ module Channel
 		class Tree < TupleSet
 			def initialize_parser()
 				super(:file)
-			end
-			
-			# Takes an input stream and returns a parse Tree object 
-			# with the full graph of the input.
-			def Tree.parse(input_stream)
-				# always start a stream in the line tuple mode.
-				tree = self.new_parser
-
-				input_stream.each_byte {|b|
-					c = b.chr
-					tree.next(c)
-				}
-				tree.next(nil)
-				return tree
 			end
 		end
 	end
