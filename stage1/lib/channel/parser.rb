@@ -32,9 +32,9 @@ module Channel
 
 			# Takes an input stream and returns a parse Tree object 
 			# with the full graph of the input.
-			def Node.parse(input_stream)
+			def Node.parse(input_stream, *context)
 				# always start a stream in the line tuple mode.
-				node = self.new_parser
+				node = self.new_parser(*context)
 
 				input_stream.each_byte {|b|
 					c = b.chr
