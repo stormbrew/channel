@@ -8,12 +8,10 @@ module Channel
 		class Node
 		  def self.node_type_from_first_character(char)
   			return case char
-  			when '{' then TupleSet.new_parser(:line)
-  			when '(' then TupleSet.new_parser(:comma)
-  			when '"' then StringConstant.new_parser(:complex)
-  			when "'" then StringConstant.new_parser(:simple)
-  		  when '$', '@' then Reference.new_parser(char) 
-  			else BareWord.new_parser(char)
+  			when '{', '(' then TupleSet.new_parser
+  			when '"', "'" then StringConstant.new_parser
+  		  when '$', '@' then Reference.new_parser
+  			else BareWord.new_parser
   			end
   		end
 
@@ -91,6 +89,7 @@ module Channel
 				
 				# otherwise, figure out what the next node is.
 				@current_value = Node::node_type_from_first_character(char)
+				@current_value.read(char)
 				return false
 			end
 			def inspect_r(l = 0)
@@ -116,26 +115,39 @@ module Channel
 				@type = type
 				@tuples = tuples
 			end
-			def initialize_parser(type)
+			def initialize_parser(type = :unknown)
 				@type = type
 				case type
 				when :file
 					@splitter = '\n'
 					@terminator = nil
-				when :line
-					@splitter = '\n'
-					@terminator = '}'
-				when :comma
-					@splitter = ','
-					@terminator = ')'
+					@current_tuple = Tuple.new_parser(@type, @splitter, @terminator)
+				when :unknown
+					@splitter = nil
+					@terminator = nil
+					@current_tuple = nil
 				end
 				@tuples = []
-				@current_tuple = Tuple.new_parser(@type, @splitter, @terminator)
 			end
 			def ==(other)
 				@type == other.type && @tuples == other.tuples
 			end
 			def next(char)
+				if (@type == :unknown)
+					case char
+					when '{'
+						@type = :line
+						@splitter = '\n'
+						@terminator = '}'
+					when '('
+						@type = :comma
+						@splitter = ','
+						@terminator = ')'
+					end
+					@current_tuple = Tuple.new_parser(@type, @splitter, @terminator)
+					return false
+				end
+				
 				if (@current_tuple)
 					status = @current_tuple.next(char)
 					return false if (status == false)
@@ -177,12 +189,9 @@ module Channel
 				@string << string
 				@type = type
 			end
-			def initialize_parser(type)
-				@type = type
-				@terminator = case type
-					when :simple then "'"
-					when :complex then '"'
-					end
+			def initialize_parser()
+				@type = :unknown
+				@terminator = nil
 				@string = StringIO.new()
 				@escape = false
 			end
@@ -190,6 +199,15 @@ module Channel
 				string == other.string && type == other.type
 			end
 			def next(char)
+				if (@type == :unknown)
+					@type = case char
+						when '"' then :complex
+						when "'" then :simple
+						end
+					@terminator = char
+					return false
+				end
+				
 				if (@escape)
 					@string << char
 					@escape = false
@@ -263,14 +281,19 @@ module Channel
 				@string = StringIO.new
 				@string << string
 			end
-	    def initialize_parser(type)
-	      @type = type
+	    def initialize_parser()
+	      @type = :unknown
 	      @string = StringIO.new
       end
 			def ==(other)
 				type == other.type && string == other.string
 			end
       def next(char)
+				if (@type == :unknown)
+					@type = char
+					return false
+				end
+	
         case char
         when 'a'..'z', 'A'..'Z', '0'..'9', '_'
           @string << char
