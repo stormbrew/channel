@@ -15,11 +15,11 @@ This language is a patchwork of several other language's concepts. They are:
      the only means to communicate between them.
 
 # Procedural code
-function blah(arg1, arg2, arg3) do: { # meta-definition of function: function function(name, args) do: {...}
-	if (arg1 == arg2) then: {
+function blah(arg1, arg2, arg3) do: { # meta-definition of function: function function name args do do: {...}
+	if ($arg1 == $arg2) then: {
 		echo("boom")
 	} else: {
-		echo(arg3)
+		echo($arg3)
 	}
 }
 
@@ -27,24 +27,24 @@ blah(1, 2, 3) # => "boom"
 blah(1, 1, 2) # => "2"
 
 # Object code
-class Blah define: { # meta-definition of class function: function class(name) do: {...}
+class Blah define: { # meta-definition of class function: function class name define do: {...}
 	function blah(arg1, arg2) do: {
-		echo(arg1)
-		@tmp = arg2
+		echo($arg1)
+		@tmp = $arg2
 	}
 	function blorp() do: {
 		echo(@tmp)
 	}
 }
-x = Blah.new
-x.blah("blorp", "bloom") # => "blorp"
-x.blorp() # => "bloom"
+var x = Blah.new
+$x.blah("blorp", "bloom") # => "blorp"
+$x.blorp() # => "bloom"
 
 
 # Anonymous functions
-x = proc(arg) do: { echo(arg) }
-x.call("blah") # => "blah"
-x("blah") # => "blah" -- shortcut invocation is only a possibility at this point. Logistics need to be figured out.
+var x = proc(arg) do: { echo(arg) }
+$x.call("blah") # => "blah"
+$x("blah") # => "blah" -- shortcut invocation is only a possibility at this point. Logistics need to be figured out.
 
 All code is tuples
 Two kinds of tuples:
