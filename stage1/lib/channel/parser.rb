@@ -272,8 +272,6 @@ module Channel
 		# underlying language or as just a special string by the 
 		# code itself.
 		class BareWord < Node
-		  attr_reader :type
-		  
 			def string
 				@string.string
 			end
@@ -282,20 +280,38 @@ module Channel
 				@string = StringIO.new
 				@string << string
 			end
-			def initialize_parser(first_char = nil)
+			def initialize_parser()
 				@string = StringIO.new
-				@string << first_char if (first_char)
+				@type = :unknown
 			end
 			def ==(other)
-				type == other.type && string == other.string
+				string == other.string
 			end
 			def next(char)
-				case char
-				when ' ', "\t", "\n", '(', ')', '{', '}', ',', '"', "'", '$', '@', nil
-					return char # hit a termination case for a bareword
-				else
-					@string << char
-					return false
+				if (char =~ /[ \t\n(){},"'$@]/ || char.nil?)
+					return char
+				end
+				
+				char_type = (char =~ /[a-zA-Z0-9_]/)? :alnumunder : :symbol
+				if (@type == :unknown)
+					@type = char_type
+				end
+				
+				case @type
+				when :alnumunder
+					if (char_type == :alnumunder)
+						@string << char
+						return false
+					else
+						return char
+					end
+				when :symbol
+					if (char_type == :symbol)
+						@string << char
+						return false
+					else
+						return char
+					end
 				end
 			end
 			def inspect_r(l = 0)
