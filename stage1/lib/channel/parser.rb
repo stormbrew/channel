@@ -241,7 +241,11 @@ module Channel
 				end
 				
 				if (@escape)
-					@string << char
+					if (@type == :complex || char == @terminator) # only escape \' on simple strings.
+						@string << char
+					else
+						@string << "\\" << char
+					end	
 					@escape = false
 					return false
 				end
