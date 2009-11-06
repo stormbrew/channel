@@ -66,8 +66,11 @@ describe Channel::Parser do
 			it "should allow escaping on a complex string" do
 				StringConstant::parse(%Q{"blorp\\"blah"}).should == StringConstant[:complex, %Q{blorp"blah}]
 			end
-			it "should not allow escaping on a simple string" do
-				StringConstant::parse(%Q{'blorp\\'blah'}).should == StringConstant[:simple, %{blah\\'blorp}]
+			it "should not allow most escaping on a simple string" do
+				StringConstant::parse(%Q{'blorp\\"blah'}).should == StringConstant[:simple, %{blorp\\"blah}]
+			end
+			it "should allow escaping of the termination character in a simple string" do
+				StringConstant::parse(%Q{'blorp\\'blah'}).should == StringConstant[:simple, %{blorp'blah}]
 			end
 		end
 		
