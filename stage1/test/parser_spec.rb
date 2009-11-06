@@ -53,6 +53,7 @@ describe Channel::Parser do
 				BareWord::parse("abcd ").should == BareWord["abcd"]
 				BareWord::parse("abcd\n").should == BareWord["abcd"]
 				BareWord::parse("abcd\t").should == BareWord["abcd"]
+				BareWord::parse("abcd:").should == BareWord["abcd"]
 			end
 			
 			it "should differentiate between a alnumunder bareword and a symbolic bareword" do
