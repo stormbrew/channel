@@ -92,6 +92,11 @@ module Channel
 				@current_value.next(char)
 				return false
 			end
+			
+			def empty?
+			  return @values.empty?
+		  end
+			
 			def inspect_r(l = 0)
 				t = "\n" + ' ' * l
 				s = StringIO.new()
@@ -152,7 +157,7 @@ module Channel
 					status = @current_tuple.next(char)
 					return false if (status == false)
 					
-					@tuples << @current_tuple
+					@tuples << @current_tuple if (!@current_tuple.empty?) # only if not empty.
 					@current_tuple = Tuple.new_parser(@type, @splitter, @terminator)
 					return false if (status == :done) # no character was passed back, so do nothing 'til the next character
 					char = status # if we get here, a character was passed back so process it.
@@ -163,6 +168,10 @@ module Channel
 				end
 				return false
 			end
+			
+			def empty?
+			  return @tuples.empty?
+		  end
 			
 			def inspect_r(l = 0)
 				t = "\n" + " " * l
