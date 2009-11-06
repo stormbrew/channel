@@ -44,17 +44,12 @@ module Channel
 				return node
 			end
 			
-			# Overload if some of args need to be run back through Node[]
-			def Node.new_pretty(*args)
-				self.new(*args)
-			end
-			
 			# use to generate a tree of nodes in a prettier way than NodeType.new(...) which
 			# gets almost impossible to read more than one or two levels deep.
 			# Node subtypes can overload new_pretty in order to deal with child items,
 			# which should be run back through Node[] to generate the proper objects.
-			def Node.[](type, *args)
-				type.new_pretty(*args)
+			def Node.[](*args)
+				self.new(*args)
 			end
 	  end
 		
@@ -64,12 +59,8 @@ module Channel
 		class Tuple < Node
 			attr_reader :type
 			attr_reader :values
-			
-			def Tuple.new_pretty(values = [], type = :comma)
-				self.new(values.collect {|val| Node[*val] }, type)
-			end
-			
-			def initialize(values = [], type = :comma)
+						
+			def initialize(type = :comma, values = [])
 				@type = type
 				@values = values
 			end
@@ -133,11 +124,11 @@ module Channel
 		class TupleSet < Node
 			attr_reader :type, :tuples
 			
-			def TupleSet.new_pretty(tuples = [], type = :comma)
+			def TupleSet.new_pretty(type = :comma, tuples = [])
 				self.new(tuples.collect {|val| Node[*val] }, type)
 			end
 			
-			def initialize(tuples = [], type = :comma)
+			def initialize(type = :comma, tuples = [])
 				@type = type
 				@tuples = tuples
 			end
@@ -214,7 +205,7 @@ module Channel
 			end
 			attr_reader :type
 			
-			def initialize(string = "", type = :complex)
+			def initialize(type = :complex, string = "")
 				@string = StringIO.new
 				@string << string
 				@type = type
@@ -306,7 +297,7 @@ module Channel
 		    @string.string
 	    end
 	    
-			def initialize(string = "", type = '$')
+			def initialize(type = '$', string = "")
 				@type = type
 				@string = StringIO.new
 				@string << string
@@ -340,6 +331,9 @@ module Channel
 		class Tree < TupleSet
 			def initialize_parser()
 				super(:file)
+			end
+			def initialize(tuples = [])
+				super(:file, tuples)
 			end
 		end
 	end
