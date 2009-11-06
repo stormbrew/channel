@@ -1,8 +1,19 @@
 # This parser is implemented purely by brute force with no attempt at elegance or performance.
 require 'stringio'
 
+class Symbol
+	def inspect_r()
+		return ":#{to_s}"
+	end
+end
+class String
+	def inspect_r()
+		return "'#{gsub("\\", "\\\\")}'"
+	end
+end
+
 module Channel
- 	module Parser		
+ 	module Parser
 		# base class for parse tree nodes provides
 		# tools for the node-type subclasses.
 		class Node
@@ -106,13 +117,13 @@ module Channel
 		  end
 			
 			def inspect_r(l = 0)
-				t = "\n" + ' ' * l
+				t = ' '*l
 				s = StringIO.new()
-				s << t << "Tuple[\n"
-				@values.each {|val|
-					s << val.inspect_r(l + 1)
-				}
-				s << t << "]\n"
+				s << t << %Q{Tuple[:#{type}, [\n}
+				s << @values.collect {|val|
+					val.inspect_r(l+1)
+				}.join(",\n")
+				s << "\n" << t << %Q{]]}
 				return s.string
 			end
 		end
@@ -186,13 +197,13 @@ module Channel
 		  end
 			
 			def inspect_r(l = 0)
-				t = "\n" + " " * l
+				t = " " * l
 				s = StringIO.new
-				s << t << "TupleSet["
-				@tuples.each {|tuple|
-					s << tuple.inspect_r(l + 1)
-				}
-				s << t << "]\n"
+				s << t << "TupleSet[:#{type}, [\n"
+				s << @tuples.collect {|tuple|
+					tuple.inspect_r(l + 1)
+				}.join(",\n")
+				s << "\n" << t << "]]"
 				return s.string
 			end
 		end
@@ -248,7 +259,7 @@ module Channel
 			end
 			
 			def inspect_r(l = 0)
-				return "#{' '*l}String[#{@terminator}#{@string.string}#{@terminator}]"
+				return %Q{#{' '*l}StringConstant[:#{@type}, #{string.inspect_r}]}
 			end
 		end
 		
@@ -284,7 +295,7 @@ module Channel
 				end
 			end
 			def inspect_r(l = 0)
-				return "#{' '*l}BareWord[#{@string.string}]"
+				return "#{' '*l}BareWord[#{string.inspect_r}]"
 			end
 		end
 		
@@ -324,7 +335,7 @@ module Channel
         end
       end
       def inspect_r(l = 0)
-        return "#{' '*l}Reference[#{@type}#{@string.string}]"
+        return "#{' '*l}Reference[#{@type.inspect_r}, #{string.inspect_r}]"
       end
     end
 		
@@ -332,9 +343,19 @@ module Channel
 			def initialize_parser()
 				super(:file)
 			end
-			def initialize(tuples = [])
+			def initialize(*tuples)
 				super(:file, tuples)
 			end
+			def inspect_r(l = 0)
+				t = " " * l
+				s = StringIO.new
+				s << t << "Tree[\n"
+				s << @tuples.collect {|tuple|
+					tuple.inspect_r(l + 1)
+				}.join(",\n")
+				s << "\n" << t << "]"
+				return s.string
+			end				
 		end
 	end
 end

@@ -121,22 +121,191 @@ describe Channel::Parser do
 		describe Tree do
 			it "should be able to parse a very simple file" do
 				File.open("test/data/really_simple.ch") {|f|
-					Tree::parse(f).should == Tree[[Tuple[:file, [BareWord['a']]]]]
+					Tree::parse(f).should == Tree[Tuple[:file, [BareWord['a']]]]
 				}
 			end
 			it "should be able to parse the baseline sample file" do
 				File.open("test/data/sample.ch") {|f|
-					#Tree::parse(f).should == TupleSet.new([Tuple.new([BareWord['a')], :file)], :file) # TODO: generate matching data
+					Tree::parse(f).should == Tree[
+					 Tuple[:file, [
+					  BareWord['function'],
+					  BareWord['blah'],
+					  TupleSet[:comma, [
+					   Tuple[:comma, [
+					    BareWord['arg1']
+					   ]],
+					   Tuple[:comma, [
+					    BareWord['arg2']
+					   ]],
+					   Tuple[:comma, [
+					    BareWord['arg3']
+					   ]]
+					  ]],
+					  BareWord['do:'],
+					  TupleSet[:line, [
+					   Tuple[:line, [
+					    BareWord['if'],
+					    TupleSet[:comma, [
+					     Tuple[:comma, [
+					      Reference['$', 'arg1'],
+					      BareWord['=='],
+					      Reference['$', 'arg2']
+					     ]]
+					    ]],
+					    BareWord['then:'],
+					    TupleSet[:line, [
+					     Tuple[:line, [
+					      BareWord['echo'],
+					      TupleSet[:comma, [
+					       Tuple[:comma, [
+					        StringConstant[:complex, '"boom"']
+					       ]]
+					      ]]
+					     ]]
+					    ]],
+					    BareWord['else:'],
+					    TupleSet[:line, [
+					     Tuple[:line, [
+					      BareWord['echo'],
+					      TupleSet[:comma, [
+					       Tuple[:comma, [
+					        Reference['$', 'arg3']
+					       ]]
+					      ]]
+					     ]]
+					    ]]
+					   ]]
+					  ]]
+					 ]]
+					]
 				}
 			end
 			it "should be able to parse the closure sample file" do
 				File.open("test/data/closure_sample.ch") {|f|
-					#Tree::parse(f).should == TupleSet.new([Tuple.new([BareWord['a')], :file)], :file) # TODO: generate matching data
+					Tree::parse(f).should == Tree[
+					 Tuple[:file, [
+					  BareWord['var'],
+					  BareWord['x'],
+					  BareWord['='],
+					  BareWord['proc'],
+					  TupleSet[:comma, [
+					   Tuple[:comma, [
+					    BareWord['arg']
+					   ]]
+					  ]],
+					  BareWord['do:'],
+					  TupleSet[:line, [
+					   Tuple[:line, [
+					    BareWord['echo'],
+					    TupleSet[:comma, [
+					     Tuple[:comma, [
+					      Reference['$', 'arg']
+					     ]]
+					    ]]
+					   ]]
+					  ]]
+					 ]],
+					 Tuple[:file, [
+					  Reference['$', 'x'],
+					  BareWord['.call'],
+					  TupleSet[:comma, [
+					   Tuple[:comma, [
+					    StringConstant[:complex, 'blah']
+					   ]]
+					  ]],
+					  BareWord['#'],
+					  BareWord['=>'],
+					  StringConstant[:complex, 'blah']
+					 ]],
+					 Tuple[:file, [
+					  Reference['$', 'x'],
+					  TupleSet[:comma, [
+					   Tuple[:comma, [
+					    StringConstant[:complex, 'blah']
+					   ]]
+					  ]]
+					 ]]
+					]
 				}
 			end
 			it "should be able to parse the object sample file" do
 				File.open("test/data/object_sample.ch") {|f|
-					#Tree::parse(f).should == TupleSet.new([Tuple.new([BareWord['a')], :file)], :file) # TODO: generate matching data
+					Tree::parse(f).should == Tree[
+					 Tuple[:file, [
+					  BareWord['class'],
+					  BareWord['Blah'],
+					  BareWord['define:'],
+					  TupleSet[:line, [
+					   Tuple[:line, [
+					    BareWord['function'],
+					    BareWord['blah'],
+					    TupleSet[:comma, [
+					     Tuple[:comma, [
+					      BareWord['arg1']
+					     ]],
+					     Tuple[:comma, [
+					      BareWord['arg2']
+					     ]]
+					    ]],
+					    BareWord['do:'],
+					    TupleSet[:line, [
+					     Tuple[:line, [
+					      BareWord['echo'],
+					      TupleSet[:comma, [
+					       Tuple[:comma, [
+					        Reference['$', 'arg1']
+					       ]]
+					      ]]
+					     ]],
+					     Tuple[:line, [
+					      Reference['@', 'tmp'],
+					      BareWord['='],
+					      Reference['$', 'arg2']
+					     ]]
+					    ]]
+					   ]],
+					   Tuple[:line, [
+					    BareWord['function'],
+					    BareWord['blorp'],
+					    TupleSet[:comma, []],
+					    BareWord['do:'],
+					    TupleSet[:line, [
+					     Tuple[:line, [
+					      BareWord['echo'],
+					      TupleSet[:comma, [
+					       Tuple[:comma, [
+					        Reference['@', 'tmp']
+					       ]]
+					      ]]
+					     ]]
+					    ]]
+					   ]]
+					  ]]
+					 ]],
+					 Tuple[:file, [
+					  BareWord['var'],
+					  BareWord['x'],
+					  BareWord['='],
+					  BareWord['Blah.new']
+					 ]],
+					 Tuple[:file, [
+					  Reference['$', 'x'],
+					  BareWord['.blah'],
+					  TupleSet[:comma, [
+					   Tuple[:comma, [
+					    StringConstant[:complex, 'blorp']
+					   ]],
+					   Tuple[:comma, [
+					    StringConstant[:complex, 'bloom']
+					   ]]
+					  ]]
+					 ]],
+					 Tuple[:file, [
+					  Reference['$', 'x'],
+					  BareWord['.blorp'],
+					  TupleSet[:comma, []]
+					 ]]
+					]
 				}
 			end
 		end
