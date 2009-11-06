@@ -1,4 +1,18 @@
 Stage 1: Ruby parser, execution simply proxying to ruby calls
+- write basic parser to translate documents into token trees
+ - parse simple 'documents'
+  x implement tuplesets
+   - add squarebracket tuplesets (unary tuples?)
+  x implement tuples
+  x implement strings
+  - implement barewords 
+   - split barewords into symbolic (non-alnumunder) and alnumunder
+   - make alnumunder barewords transform into labels with : at end
+  - implement 'labels'
+ x unit test parser with rspecs
+- write engine that runs commands from parse tree through ruby
+ - make it able to run sample.ch (which is entirely procedural)
+ - make it able to run object_sample.ch (which is object oriented)
 Stage 2: C parser (probably not using parser generator), execution still passing through to ruby interpreter
 Stage 3: C parser, custom execution engine
 Stage 4: ...
