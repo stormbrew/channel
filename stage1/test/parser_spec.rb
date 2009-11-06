@@ -25,6 +25,13 @@ describe Channel::Parser do
 				Node::node_type_from_first_character("a").should == BareWord.new("")
 				Node::node_type_from_first_character("1").should == BareWord.new("")
 			end
+			
+			it "should let you build node sets using array syntax" do
+				Node[TupleSet, [
+					[Tuple, [[BareWord, 'blah']], :line], 
+					[Tuple, [[BareWord, 'blorp']], :line], 
+				], :line].should == TupleSet.new([Tuple.new([BareWord.new('blah')], :line), Tuple.new([BareWord.new('blorp')], :line)], :line)
+			end
 		end
 		
 		describe BareWord do

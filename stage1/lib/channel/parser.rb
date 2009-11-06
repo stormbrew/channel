@@ -43,6 +43,19 @@ module Channel
 				node.next(nil)
 				return node
 			end
+			
+			# Overload if some of args need to be run back through Node[]
+			def Node.new_pretty(*args)
+				self.new(*args)
+			end
+			
+			# use to generate a tree of nodes in a prettier way than NodeType.new(...) which
+			# gets almost impossible to read more than one or two levels deep.
+			# Node subtypes can overload new_pretty in order to deal with child items,
+			# which should be run back through Node[] to generate the proper objects.
+			def Node.[](type, *args)
+				type.new_pretty(*args)
+			end
 	  end
 		
 		# A tuple is a set of values separated by spaces in the input document.
@@ -51,6 +64,10 @@ module Channel
 		class Tuple < Node
 			attr_reader :type
 			attr_reader :values
+			
+			def Tuple.new_pretty(values = [], type = :comma)
+				self.new(values.collect {|val| Node[*val] }, type)
+			end
 			
 			def initialize(values = [], type = :comma)
 				@type = type
@@ -115,6 +132,10 @@ module Channel
 		# of a tuple set. 
 		class TupleSet < Node
 			attr_reader :type, :tuples
+			
+			def TupleSet.new_pretty(tuples = [], type = :comma)
+				self.new(tuples.collect {|val| Node[*val] }, type)
+			end
 			
 			def initialize(tuples = [], type = :comma)
 				@type = type
