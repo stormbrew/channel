@@ -115,6 +115,20 @@ describe Channel::Parser do
 		  end
 		end
 		
+		describe Label do
+			it "should generate a label from a tuple with a : in it" do
+				Tuple::parse(%Q{blah:blorp}, :file, "\n", nil).should == Tuple[:file, [Label[BareWord['blah'], BareWord['blorp']]]]
+			end
+			it "should properly deal with tuple values preceeding or succeeding the label not being part of the label" do
+				Tuple::parse(%Q{blah blorp: what wut}, :file, "\n", nil).should == Tuple[:file, [BareWord['blah'], Label[BareWord['blorp'], BareWord['what']], BareWord['wut']]]
+			end
+			it "should allow composite types on either or both sides of the :" do
+				Tuple::parse(%Q{(a, b): c}, :file, "\n", nil).should == Tuple[:file, [Label[Tuple[:comma, [BareWord['a'], BareWord['b']]], BareWord['b']]]]
+				Tuple::parse(%Q{a: (b, c)}, :file, "\n", nil).should == Tuple[:file, [Label[BareWord['a']], Tuple[:comma, [BareWord['b'], BareWord['c']]]]]
+				Tuple::parse(%Q{(a, b): (c, d)}, :file, "\n", nil).should == Tuple[:file, [Label[Tuple[:comma, [BareWord['a'], BareWord['b']]], Tuple[:comma, [BareWord['c'], BareWord['d']]]]]]
+			end
+		end
+		
 		describe TupleSet do
 			it "should create an empty tupleset from empty braces" do
 				TupleSet::parse(%Q|{}|).should == TupleSet[:line, []]
@@ -129,7 +143,7 @@ describe Channel::Parser do
 				TupleSet::parse(%Q|(blah,blorp)|).should == TupleSet[:comma, [Tuple[:comma, [BareWord['blah']]], Tuple[:comma, [BareWord['blorp']]]]]
 			end
 		end
-	
+			
 		describe Tree do
 			it "should be able to parse a very simple file" do
 				File.open("test/data/really_simple.ch") {|f|
