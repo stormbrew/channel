@@ -119,7 +119,7 @@ module Channel
 				@type = type
 				case type
 				when :file
-					@splitter = '\n'
+					@splitter = "\n"
 					@terminator = nil
 					@current_tuple = Tuple.new_parser(@type, @splitter, @terminator)
 				when :unknown
@@ -137,7 +137,7 @@ module Channel
 					case char
 					when '{'
 						@type = :line
-						@splitter = '\n'
+						@splitter = "\n"
 						@terminator = '}'
 					when '('
 						@type = :comma
