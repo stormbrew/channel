@@ -54,6 +54,7 @@ describe Channel::Parser do
 				BareWord::parse("abcd\n").should == BareWord["abcd"]
 				BareWord::parse("abcd\t").should == BareWord["abcd"]
 				BareWord::parse("abcd:").should == BareWord["abcd"]
+				BareWord::parse("abcd#").should == BareWord["abcd"]
 			end
 			
 			it "should differentiate between a alnumunder bareword and a symbolic bareword" do
@@ -68,19 +69,31 @@ describe Channel::Parser do
 
 		describe StringConstant do
 			it "should accept a simple string" do
-				StringConstant::parse(%Q{'blah'}).should == StringConstant[:simple, 'blah']
+				StringConstant::parse(%Q{'blah'}).should == StringConstant["'", 'blah']
 			end
 			it "should accept a complex string" do
-				StringConstant::parse(%Q{"blah"}).should == StringConstant[:complex, 'blah']
+				StringConstant::parse(%Q{"blah"}).should == StringConstant['"', 'blah']
 			end
-			it "should allow escaping on a complex string" do
-				StringConstant::parse(%Q{"blorp\\"blah"}).should == StringConstant[:complex, %Q{blorp"blah}]
+			it "should accept an arbitrary delimited string with a simple delimiter" do
+				StringConstant::parse('#r|blah|').should == StringConstant['#r', 'blah']
+				StringConstant::parse('#rAblahA').should == StringConstant['#r', 'blah']
+				StringConstant::parse('#r/blah/').should == StringConstant['#r', 'blah']
 			end
-			it "should not allow most escaping on a simple string" do
-				StringConstant::parse(%Q{'blorp\\"blah'}).should == StringConstant[:simple, %{blorp\\"blah}]
+			it "should accept an arbitrary delimited string with a bracket delimiter" do
+				StringConstant::parse('#r{blah}').should == StringConstant['#r', 'blah']
+				StringConstant::parse('#r[blah]').should == StringConstant['#r', 'blah']
+				StringConstant::parse('#r(blah)').should == StringConstant['#r', 'blah']
 			end
-			it "should allow escaping of the termination character in a simple string" do
-				StringConstant::parse(%Q{'blorp\\'blah'}).should == StringConstant[:simple, %{blorp'blah}]
+			it "should escape the terminator" do
+				StringConstant::parse(%Q{"blorp\\"blah"}).should == StringConstant['"', %Q{blorp"blah}]
+				StringConstant::parse(%Q{'blorp\\'blah'}).should == StringConstant["'", %Q{blorp'blah}]
+				StringConstant::parse('#r{blorp\\}blah}').should == StringConstant['#r', %Q|blorp}blah|]
+			end
+			it "should not escape anything that's not the terminator" do
+				StringConstant::parse(%Q{'blorp\\"blah'}).should == StringConstant["'", %Q{blorp\\"blah}]
+			end
+			it "should ignore an escaped backslash before the terminator, but pass through the double backslash (and terminate the string)" do
+				StringConstant::parse(%Q{'blorp\\\\'blah'}).should == StringConstant["'", %Q{blorp\\\\}]
 			end
 		end
 		
@@ -99,8 +112,8 @@ describe Channel::Parser do
 			end
 			it "should create a single value tuple from any of the scalar subtypes" do
 				Tuple::parse(%Q{blah}, :file, "\n", nil).should == Tuple[:file, [BareWord['blah']]]
-				Tuple::parse(%Q{"blah"}, :file, "\n", nil).should == Tuple[:file, [StringConstant[:complex, 'blah']]]
-				Tuple::parse(%Q{'blah'}, :file, "\n", nil).should == Tuple[:file, [StringConstant[:simple, 'blah']]]
+				Tuple::parse(%Q{"blah"}, :file, "\n", nil).should == Tuple[:file, [StringConstant['"', 'blah']]]
+				Tuple::parse(%Q{'blah'}, :file, "\n", nil).should == Tuple[:file, [StringConstant["'", 'blah']]]
 				Tuple::parse(%Q{$blah}, :file, "\n", nil).should == Tuple[:file, [Reference['$', 'blah']]]
 				Tuple::parse(%Q{@blah}, :file, "\n", nil).should == Tuple[:file, [Reference['@', 'blah']]]
 			end
@@ -109,7 +122,7 @@ describe Channel::Parser do
 				Tuple::parse(%Q|{}|, :file, "\n", nil).should == Tuple[:file, [TupleSet[:line, []]]]
 			end
 			it "should create composite tuples from multiple values" do
-				Tuple::parse(%Q{blah "blah" $blorp}, :file, "\n", nil).should == Tuple[:file, [BareWord['blah'], StringConstant[:complex, 'blah'], Reference['$', 'blorp']]]
+				Tuple::parse(%Q{blah "blah" $blorp}, :file, "\n", nil).should == Tuple[:file, [BareWord['blah'], StringConstant['"', 'blah'], Reference['$', 'blorp']]]
 			end
 			it "should ignore leading and trailing whitespace" do
 			  Tuple::parse(%Q{   blah\tblorp }, :file, "\n", nil).should == Tuple[:file, [BareWord['blah'], BareWord['blorp']]]
@@ -230,7 +243,7 @@ describe Channel::Parser do
 					        BareWord['echo'],
 					        TupleSet[:comma, [
 					         Tuple[:comma, [
-					          StringConstant[:complex, '"boom"']
+					          StringConstant['"', '"boom"']
 					         ]]
 					        ]]
 					       ]]
@@ -289,18 +302,15 @@ describe Channel::Parser do
 					  BareWord['call'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
-					    StringConstant[:complex, 'blah']
+					    StringConstant['"', 'blah']
 					   ]]
-					  ]],
-					  BareWord['#'],
-					  BareWord['=>'],
-					  StringConstant[:complex, 'blah']
+					  ]]
 					 ]],
 					 Tuple[:file, [
 					  Reference['$', 'x'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
-					    StringConstant[:complex, 'blah']
+					    StringConstant['"', 'blah']
 					   ]]
 					  ]]
 					 ]]
@@ -383,10 +393,10 @@ describe Channel::Parser do
 					  BareWord['blah'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
-					    StringConstant[:complex, 'blorp']
+					    StringConstant['"', 'blorp']
 					   ]],
 					   Tuple[:comma, [
-					    StringConstant[:complex, 'bloom']
+					    StringConstant['"', 'bloom']
 					   ]]
 					  ]]
 					 ]],
