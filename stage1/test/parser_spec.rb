@@ -124,9 +124,53 @@ describe Channel::Parser do
 				Tuple::parse(%Q{blah blorp: what wut}, :file, "\n", nil).should == Tuple[:file, [BareWord['blah'], Label[BareWord['blorp'], BareWord['what']], BareWord['wut']]]
 			end
 			it "should allow composite types on either or both sides of the :" do
-				Tuple::parse(%Q{(a, b): c}, :file, "\n", nil).should == Tuple[:file, [Label[Tuple[:comma, [BareWord['a'], BareWord['b']]], BareWord['b']]]]
-				Tuple::parse(%Q{a: (b, c)}, :file, "\n", nil).should == Tuple[:file, [Label[BareWord['a']], Tuple[:comma, [BareWord['b'], BareWord['c']]]]]
-				Tuple::parse(%Q{(a, b): (c, d)}, :file, "\n", nil).should == Tuple[:file, [Label[Tuple[:comma, [BareWord['a'], BareWord['b']]], Tuple[:comma, [BareWord['c'], BareWord['d']]]]]]
+				Tuple::parse(%Q{(a, b): c}, :file, "\n", nil).should == Tuple[:file, [
+				 Label[
+				  TupleSet[:comma, [
+				   Tuple[:comma, [
+				    BareWord['a']
+				   ]],
+				   Tuple[:comma, [
+				    BareWord['b']
+				   ]]
+				  ]],
+				  BareWord['c']
+				 ]
+				]]
+				Tuple::parse(%Q{c: (a, b)}, :file, "\n", nil).should == Tuple[:file, [
+				 Label[
+				  BareWord['c'],
+				  TupleSet[:comma, [
+				   Tuple[:comma, [
+				    BareWord['a']
+				   ]],
+				   Tuple[:comma, [
+				    BareWord['b']
+				   ]]
+				  ]]
+				 ]
+				]]
+				
+				Tuple::parse(%Q{(a, b): (a, b)}, :file, "\n", nil).should == Tuple[:file, [
+				 Label[
+				  TupleSet[:comma, [
+				   Tuple[:comma, [
+				    BareWord['a']
+				   ]],
+				   Tuple[:comma, [
+				    BareWord['b']
+				   ]]
+				  ]],
+				  TupleSet[:comma, [
+				   Tuple[:comma, [
+				    BareWord['a']
+				   ]],
+				   Tuple[:comma, [
+				    BareWord['b']
+				   ]]
+				  ]]
+				 ]
+				]]
 			end
 		end
 		
@@ -168,41 +212,47 @@ describe Channel::Parser do
 					    BareWord['arg3']
 					   ]]
 					  ]],
-					  BareWord['do:'],
-					  TupleSet[:line, [
-					   Tuple[:line, [
-					    BareWord['if'],
-					    TupleSet[:comma, [
-					     Tuple[:comma, [
-					      Reference['$', 'arg1'],
-					      BareWord['=='],
-					      Reference['$', 'arg2']
-					     ]]
-					    ]],
-					    BareWord['then:'],
-					    TupleSet[:line, [
-					     Tuple[:line, [
-					      BareWord['echo'],
-					      TupleSet[:comma, [
-					       Tuple[:comma, [
-					        StringConstant[:complex, '"boom"']
+					  Label[
+					   BareWord['do'],
+					   TupleSet[:line, [
+					    Tuple[:line, [
+					     BareWord['if'],
+					     TupleSet[:comma, [
+					      Tuple[:comma, [
+					       Reference['$', 'arg1'],
+					       BareWord['=='],
+					       Reference['$', 'arg2']
+					      ]]
+					     ]],
+					     Label[
+					      BareWord['then'],
+					      TupleSet[:line, [
+					       Tuple[:line, [
+					        BareWord['echo'],
+					        TupleSet[:comma, [
+					         Tuple[:comma, [
+					          StringConstant[:complex, '"boom"']
+					         ]]
+					        ]]
 					       ]]
 					      ]]
-					     ]]
-					    ]],
-					    BareWord['else:'],
-					    TupleSet[:line, [
-					     Tuple[:line, [
-					      BareWord['echo'],
-					      TupleSet[:comma, [
-					       Tuple[:comma, [
-					        Reference['$', 'arg3']
+					     ],
+					     Label[
+					      BareWord['else'],
+					      TupleSet[:line, [
+					       Tuple[:line, [
+					        BareWord['echo'],
+					        TupleSet[:comma, [
+					         Tuple[:comma, [
+					          Reference['$', 'arg3']
+					         ]]
+					        ]]
 					       ]]
 					      ]]
-					     ]]
+					     ]
 					    ]]
 					   ]]
-					  ]]
+					  ]
 					 ]]
 					]
 				}
@@ -220,21 +270,24 @@ describe Channel::Parser do
 					    BareWord['arg']
 					   ]]
 					  ]],
-					  BareWord['do:'],
-					  TupleSet[:line, [
-					   Tuple[:line, [
-					    BareWord['echo'],
-					    TupleSet[:comma, [
-					     Tuple[:comma, [
-					      Reference['$', 'arg']
+					  Label[
+					   BareWord['do'],
+					   TupleSet[:line, [
+					    Tuple[:line, [
+					     BareWord['echo'],
+					     TupleSet[:comma, [
+					      Tuple[:comma, [
+					       Reference['$', 'arg']
+					      ]]
 					     ]]
 					    ]]
 					   ]]
-					  ]]
+					  ]
 					 ]],
 					 Tuple[:file, [
 					  Reference['$', 'x'],
-					  BareWord['.call'],
+					  BareWord['.'],
+					  BareWord['call'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
 					    StringConstant[:complex, 'blah']
@@ -261,63 +314,74 @@ describe Channel::Parser do
 					 Tuple[:file, [
 					  BareWord['class'],
 					  BareWord['Blah'],
-					  BareWord['define:'],
-					  TupleSet[:line, [
-					   Tuple[:line, [
-					    BareWord['function'],
-					    BareWord['blah'],
-					    TupleSet[:comma, [
-					     Tuple[:comma, [
-					      BareWord['arg1']
+					  Label[
+					   BareWord['define'],
+					   TupleSet[:line, [
+					    Tuple[:line, [
+					     BareWord['function'],
+					     BareWord['blah'],
+					     TupleSet[:comma, [
+					      Tuple[:comma, [
+					       BareWord['arg1']
+					      ]],
+					      Tuple[:comma, [
+					       BareWord['arg2']
+					      ]]
 					     ]],
-					     Tuple[:comma, [
-					      BareWord['arg2']
-					     ]]
+					     Label[
+					      BareWord['do'],
+					      TupleSet[:line, [
+					       Tuple[:line, [
+					        BareWord['echo'],
+					        TupleSet[:comma, [
+					         Tuple[:comma, [
+					          Reference['$', 'arg1']
+					         ]]
+					        ]]
+					       ]],
+					       Tuple[:line, [
+					        Reference['@', 'tmp'],
+					        BareWord['='],
+					        Reference['$', 'arg2']
+					       ]]
+					      ]]
+					     ]
 					    ]],
-					    BareWord['do:'],
-					    TupleSet[:line, [
-					     Tuple[:line, [
-					      BareWord['echo'],
-					      TupleSet[:comma, [
-					       Tuple[:comma, [
-					        Reference['$', 'arg1']
-					       ]]
-					      ]]
+					    Tuple[:line, [
+					     BareWord['function'],
+					     BareWord['blorp'],
+					     TupleSet[:comma, [
+
 					     ]],
-					     Tuple[:line, [
-					      Reference['@', 'tmp'],
-					      BareWord['='],
-					      Reference['$', 'arg2']
-					     ]]
-					    ]]
-					   ]],
-					   Tuple[:line, [
-					    BareWord['function'],
-					    BareWord['blorp'],
-					    TupleSet[:comma, []],
-					    BareWord['do:'],
-					    TupleSet[:line, [
-					     Tuple[:line, [
-					      BareWord['echo'],
-					      TupleSet[:comma, [
-					       Tuple[:comma, [
-					        Reference['@', 'tmp']
+					     Label[
+					      BareWord['do'],
+					      TupleSet[:line, [
+					       Tuple[:line, [
+					        BareWord['echo'],
+					        TupleSet[:comma, [
+					         Tuple[:comma, [
+					          Reference['@', 'tmp']
+					         ]]
+					        ]]
 					       ]]
 					      ]]
-					     ]]
+					     ]
 					    ]]
 					   ]]
-					  ]]
+					  ]
 					 ]],
 					 Tuple[:file, [
 					  BareWord['var'],
 					  BareWord['x'],
 					  BareWord['='],
-					  BareWord['Blah.new']
+					  BareWord['Blah'],
+					  BareWord['.'],
+					  BareWord['new']
 					 ]],
 					 Tuple[:file, [
 					  Reference['$', 'x'],
-					  BareWord['.blah'],
+					  BareWord['.'],
+					  BareWord['blah'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
 					    StringConstant[:complex, 'blorp']
@@ -329,8 +393,11 @@ describe Channel::Parser do
 					 ]],
 					 Tuple[:file, [
 					  Reference['$', 'x'],
-					  BareWord['.blorp'],
-					  TupleSet[:comma, []]
+					  BareWord['.'],
+					  BareWord['blorp'],
+					  TupleSet[:comma, [
+
+					  ]]
 					 ]]
 					]
 				}
