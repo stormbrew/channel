@@ -83,7 +83,7 @@ module Channel
 				@current_value = nil
 			end
 			def ==(other)
-				@type == other.type && @values == other.values
+				self.class == other.class && @type == other.type && @values == other.values
 			end
 			def next(char)
 				if (@current_value)
@@ -158,7 +158,7 @@ module Channel
 				@tuples = []
 			end
 			def ==(other)
-				@type == other.type && @tuples == other.tuples
+				self.class == other.class && @type == other.type && @tuples == other.tuples
 			end
 			def next(char)
 				if (@type == :unknown)
@@ -228,7 +228,7 @@ module Channel
 				@escape = false
 			end
 			def ==(other)
-				string == other.string && type == other.type
+				self.class == other.class && string == other.string && type == other.type
 			end
 			def next(char)
 				if (@type == :unknown)
@@ -285,7 +285,7 @@ module Channel
 				@type = :unknown
 			end
 			def ==(other)
-				string == other.string
+				self.class == other.class && string == other.string
 			end
 			def next(char)
 				if (char =~ /[ \t\n(){},"'$@]/ || char.nil?)
@@ -338,7 +338,7 @@ module Channel
 	      @string = StringIO.new
       end
 			def ==(other)
-				type == other.type && string == other.string
+				self.class == other.class && type == other.type && string == other.string
 			end
       def next(char)
 				if (@type == :unknown)
