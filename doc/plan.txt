@@ -1,15 +1,16 @@
 Stage 1: Ruby parser, execution simply proxying to ruby calls
-- write basic parser to translate documents into token trees
- - parse simple 'documents'
+x write basic parser to translate documents into token trees
+ x parse simple 'documents'
   x implement tuplesets
    - add squarebracket tuplesets (unary tuples?)
   x implement tuples
   x implement strings
-  - implement barewords 
-   - split barewords into symbolic (non-alnumunder) and alnumunder
-   - make alnumunder barewords transform into labels with : at end
-  - implement 'labels'
+  x implement barewords 
+   x split barewords into symbolic (non-alnumunder) and alnumunder
+   x make alnumunder barewords transform into labels with : at end
+  x implement 'labels'
  x unit test parser with rspecs
+ - make the parser much more rigid about errors in the input (make it explode in more cases)
 - write engine that runs commands from parse tree through ruby
  - make it able to run sample.ch (which is entirely procedural)
  - make it able to run object_sample.ch (which is object oriented)
