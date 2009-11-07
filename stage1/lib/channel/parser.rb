@@ -279,10 +279,15 @@ module Channel
 						@terminator = char
 					end
 					return false
-				elsif (@type == '#') # % is incomplete, needs a subtype
+				elsif (@type == '#') # # is incomplete, needs a subtype
 					@type << char
+					case @type # handle special cases for comments
+					when '##', '# ' # line end 'comments'
+						@terminator = "\n"
+					# when '#*' later make this a multiline comment ending with *#, but figure out later.
+					end
 					return false
-				elsif (@type =~ /#./ && @terminator.nil?) # %x is still incomplete without a terminator
+				elsif (@type =~ /#./ && @terminator.nil?) # #x is still incomplete without a terminator
 					@terminator = StringConstant.map_terminator(char)
 					return false
 				end
