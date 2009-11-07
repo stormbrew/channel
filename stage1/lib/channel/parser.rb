@@ -20,7 +20,7 @@ module Channel
 		  def self.node_type_from_first_character(char)
   			return case char
   			when '{', '(' then TupleSet.new_parser
-  			when '"', "'" then StringConstant.new_parser
+  			when '"', "'", '#' then StringConstant.new_parser
   		  when '$', '@' then Reference.new_parser
   			else BareWord.new_parser
   			end
@@ -254,7 +254,11 @@ module Channel
 			end
 			attr_reader :type
 			
-			def initialize(type = :complex, string = "")
+			def self.map_terminator(char)
+				char.tr('{([', '})]') # these three, give their opposite. Otherwise, leave it the same.
+			end
+			
+			def initialize(type = '"', string = "")
 				@string = StringIO.new
 				@string << string
 				@type = type
@@ -270,16 +274,21 @@ module Channel
 			end
 			def next(char)
 				if (@type == :unknown)
-					@type = case char
-						when '"' then :complex
-						when "'" then :simple
-						end
-					@terminator = char
+					@type = char
+					if (@type != '#')
+						@terminator = char
+					end
+					return false
+				elsif (@type == '#') # % is incomplete, needs a subtype
+					@type << char
+					return false
+				elsif (@type =~ /#./ && @terminator.nil?) # %x is still incomplete without a terminator
+					@terminator = StringConstant.map_terminator(char)
 					return false
 				end
 				
 				if (@escape)
-					if (@type == :complex || char == @terminator) # only escape \' on simple strings.
+					if (char == @terminator) # only escape the terminator, leave everything else to the next level.
 						@string << char
 					else
 						@string << "\\" << char
