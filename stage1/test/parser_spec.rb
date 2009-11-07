@@ -84,6 +84,13 @@ describe Channel::Parser do
 				StringConstant::parse('#r[blah]').should == StringConstant['#r', 'blah']
 				StringConstant::parse('#r(blah)').should == StringConstant['#r', 'blah']
 			end
+			it "should accept hash-space or hash-hash as line end comments" do
+				StringConstant::parse("\# blah\nblorp").should == StringConstant['# ', 'blah']
+				StringConstant::parse("\#\#blah\nblorp").should == StringConstant['##', 'blah']
+			end
+			it "should accept hash-star as a multiline comment terminated by star-hash" do
+				# StringConstant::parse("\#*blah blah\nblorp blorp*# womper doodle").should == StringConstant['#*', "blah blah\nblorp blorp"]
+			end
 			it "should escape the terminator" do
 				StringConstant::parse(%Q{"blorp\\"blah"}).should == StringConstant['"', %Q{blorp"blah}]
 				StringConstant::parse(%Q{'blorp\\'blah'}).should == StringConstant["'", %Q{blorp'blah}]
