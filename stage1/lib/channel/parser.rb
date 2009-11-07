@@ -102,6 +102,9 @@ module Channel
 					return :done
 				when @terminator
 					return @terminator
+				when ':'
+					@current_value = Label.new_parser(@values.pop) # take the last value off the list and make it the lhs of the pair.
+					return false
 				when ' ', "\t", "\n"
 					return false
 				end
@@ -124,6 +127,41 @@ module Channel
 					val.inspect_r(l+1)
 				}.join(",\n")
 				s << "\n" << t << %Q{]]}
+				return s.string
+			end
+		end
+		
+		class Label < Node
+			attr_reader :key, :value
+			
+			def initialize(key = nil, value = nil)
+				@key, @value = key, value
+			end
+			def initialize_parser(key)
+				@key = key
+			end
+			
+			def next(char)
+				if (@value == nil)
+					if (char =~ /[\n\t ]/) # eat leading whitespace
+						return false
+					end
+					@value = Node::node_type_from_first_character(char)
+				end
+				return @value.next(char)
+			end
+			
+			def ==(other)
+				self.class == other.class && @key == other.key && @value == other.value
+			end
+			
+			def inspect_r(l = 0)
+				t = ' '*l
+				s = StringIO.new()
+				s << t << %Q{Label[\n}
+				s << @key.inspect_r(l + 1) << ",\n"
+				s << @value.inspect_r(l + 1) << "\n"
+				s << t << "]"
 				return s.string
 			end
 		end
