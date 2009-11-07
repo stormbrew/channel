@@ -217,15 +217,14 @@ describe Channel::Parser do
 					   TupleSet[:line, [
 					    Tuple[:line, [
 					     BareWord['if'],
-					     TupleSet[:comma, [
-					      Tuple[:comma, [
-					       Reference['$', 'arg1'],
-					       BareWord['=='],
-					       Reference['$', 'arg2']
-					      ]]
-					     ]],
 					     Label[
-					      BareWord['then'],
+					      TupleSet[:comma, [
+					       Tuple[:comma, [
+					        Reference['$', 'arg1'],
+					        BareWord['=='],
+					        Reference['$', 'arg2']
+					       ]]
+					      ]],
 					      TupleSet[:line, [
 					       Tuple[:line, [
 					        BareWord['echo'],
