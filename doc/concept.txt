@@ -16,7 +16,7 @@ This language is a patchwork of several other language's concepts. They are:
 
 # Procedural code
 function blah(arg1, arg2, arg3) do: { # meta-definition of function: function function name args do do: {...}
-	if ($arg1 == $arg2) then: {
+	if ($arg1 == $arg2): {
 		echo("boom")
 	} else: {
 		echo($arg3)
