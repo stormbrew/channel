@@ -3,7 +3,7 @@ if ($0 =~ %r{bin/ch$})
   $: << "lib"
 end
 
-require 'channel/parser'
+require 'channel/compiler'
 
 tree = nil
 
@@ -15,4 +15,6 @@ else
 	tree = Channel::Parser::Tree.parse($stdin)
 end
 
-puts tree.inspect_r
+compiled = Channel::Compiler::CompiledTree.new(tree)
+
+puts compiled.inspect_r
