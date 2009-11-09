@@ -2,13 +2,24 @@
 require 'stringio'
 
 class Symbol
-	def inspect_r()
+	def inspect_r(l=0)
 		return ":#{to_s}"
 	end
 end
 class String
-	def inspect_r()
-		return "'#{gsub("\\", "\\\\")}'"
+	def inspect_r(l=0)
+		return ' '*l + "'#{gsub("\\", "\\\\")}'"
+	end
+end
+
+class Array
+	def inspect_r(l=0)
+		t = ' '*l
+		s = StringIO.new
+		s << t << "[\n"
+		s << collect {|x| x.inspect_r(l+1) }.join(",\n") << "\n"
+		s << t << "]"
+		s.string
 	end
 end
 
