@@ -24,7 +24,7 @@ class Array
 end
 
 module Channel
- 	module Parser
+ 	module Parser	
 		# base class for parse tree nodes provides
 		# tools for the node-type subclasses.
 		class Node
@@ -32,8 +32,10 @@ module Channel
   			return case char
   			when '{', '(' then TupleSet.new_parser
   			when '"', "'", '#' then StringConstant.new_parser
-  		  when '$', '@' then Reference.new_parser
-  			else BareWord.new_parser
+				when 'a'..'z', 'A'..'Z', '_' then BareWord.new_parser
+				when '0'..'9' then Number.new_parser
+				when ',', ':' then raise "#{char} appeared without context. It's a reserved symbol."
+  			else Symbolic.new_parser
   			end
   		end
 
@@ -335,46 +337,23 @@ module Channel
 		# underlying language or as just a special string by the 
 		# code itself.
 		class BareWord < Node
-			def string
-				@string.string
-			end
+			attr_reader :string
 			
 			def initialize(string = "")
-				@string = StringIO.new
-				@string << string
+				@string = string
 			end
 			def initialize_parser()
-				@string = StringIO.new
-				@type = :unknown
+				@string = ""
 			end
 			def ==(other)
 				self.class == other.class && string == other.string
 			end
 			def next(char)
-				if (char =~ /[ \t\n(){},"'$@]/ || char.nil?)
+				if (char =~ /[a-zA-Z0-9_]/)
+					@string << char
+					return false
+				else
 					return char
-				end
-				
-				char_type = (char =~ /[a-zA-Z0-9_]/)? :alnumunder : :symbol
-				if (@type == :unknown)
-					@type = char_type
-				end
-				
-				case @type
-				when :alnumunder
-					if (char_type == :alnumunder)
-						@string << char
-						return false
-					else
-						return char
-					end
-				when :symbol
-					if (char_type == :symbol)
-						@string << char
-						return false
-					else
-						return char
-					end
 				end
 			end
 			def inspect_r(l = 0)
@@ -382,46 +361,80 @@ module Channel
 			end
 		end
 		
-		# A reference is similar to a bareword, except is prefixed
-		# by a $ or @ symbol. It is expected to be used to identify
-		# variable use in the language.
-		class Reference < Node
-		  attr_reader :type
-		  def string
-		    @string.string
-	    end
-	    
-			def initialize(type = '$', string = "")
-				@type = type
-				@string = StringIO.new
-				@string << string
+		# Like a bareword, but entirely made up of symbolic characters.
+		# Symbolic characters are any printable ascii characters that are not
+		# an underline, a letter, a number, or a reserved symbol of the set:
+		# "'#()[]{},:
+		class Symbolic < Node
+			attr :string
+			
+			def initialize(string = "")
+				@string = string
 			end
-	    def initialize_parser()
-	      @type = :unknown
-	      @string = StringIO.new
-      end
+			def initialize_parser()
+				@string = ""
+			end
 			def ==(other)
-				self.class == other.class && type == other.type && string == other.string
+				other.kind_of?(Symbolic) && string == other.string
 			end
-      def next(char)
-				if (@type == :unknown)
-					@type = char
-					return false
+			
+			def next(char)
+				if (char == nil)
+					return char
 				end
-	
-        case char
-        when 'a'..'z', 'A'..'Z', '0'..'9', '_'
-          @string << char
-          return false
-        else
-          return char
-        end
-      end
-      def inspect_r(l = 0)
-        return "#{' '*l}Reference[#{@type.inspect_r}, #{string.inspect_r}]"
-      end
-    end
+				case char[0]
+				when 33, 36..38, 42..43, 45..47, 59..96, 124, 126
+					@string << char
+					return false
+				else
+					return char
+				end
+			end
+			
+			def inspect_r(l = 0)
+				return "#{' '*l}Symbolic[#{string.inspect_r}]"
+			end
+		end
 		
+		# Also like a bareword, but starting with a number and containing
+		# nothing but numbers and a up to a single decimal.
+		class Number < Node
+			attr :string
+			
+			def initialize(string = "")
+				@string = string
+			end
+			def initialize_parser()
+				@string = ""
+				@dot_found = false
+			end
+			def ==(other)
+				other.kind_of?(Number) && string == other.string
+			end
+			
+			def next(char)
+				case char
+				when '0'..'9'
+					@string << char
+					return false
+				when '.'
+					if (@dot_found)
+						return char
+					else
+						@dot_found = true
+						@string << char
+						return false
+					end
+				else
+					return char
+				end
+			end
+			
+			def inspect_r(l = 0)
+				return "#{' '*l}Number[#{string.inspect_r}]"
+			end
+		end
+				
 		class Tree < TupleSet
 			def initialize_parser()
 				super(:file)

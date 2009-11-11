@@ -20,14 +20,9 @@ describe Channel::Parser do
 				Node::node_type_from_first_character("(").should == TupleSet[:unknown]
 				Node::node_type_from_first_character("'").should == StringConstant[:unknown]
 				Node::node_type_from_first_character('"').should == StringConstant[:unknown]
-				Node::node_type_from_first_character("$").should == Reference[:unknown]
-				Node::node_type_from_first_character("@").should == Reference[:unknown]
-			end
-			
-			it "should assume anything else is a 'bareword'" do
-				# note: these match :unknown because they haven't actually been passed the first character.
-				Node::node_type_from_first_character("a").should == BareWord[]
-				Node::node_type_from_first_character("1").should == BareWord[]
+				Node::node_type_from_first_character('a').should == BareWord['']
+				Node::node_type_from_first_character('1').should == Number['']
+				Node::node_type_from_first_character('<').should == Symbolic['']
 			end
 			
 			it "should let you build complex node sets using array syntax" do
@@ -56,14 +51,23 @@ describe Channel::Parser do
 				BareWord::parse("abcd:").should == BareWord["abcd"]
 				BareWord::parse("abcd#").should == BareWord["abcd"]
 			end
-			
-			it "should differentiate between a alnumunder bareword and a symbolic bareword" do
-				BareWord::parse("abcd+").should == BareWord["abcd"]
-				BareWord::parse("+abcd").should == BareWord["+"]
+		end
+		describe Number do
+			it "should accept any number of numeric characters" do
+				Number::parse("1124342342342342").should == Number["1124342342342342"]
 			end
-			
-			it "should parse alnumunder barewords and symbolic parsers in a tuple as different values" do
-				Tuple::parse("abcd+xyz", :file, "\n", nil).should == Tuple[:file, [BareWord['abcd'], BareWord['+'], BareWord['xyz']]]
+			it "should accept one decimal, and no more than one decimal, in the string" do
+				Number::parse("12343242.324").should == Number["12343242.324"]
+				Number::parse("12343242.324.32").should == Number["12343242.324"]
+			end
+		end
+		
+		describe Symbolic do
+			it "should accept any number of symbolic characters" do
+				Symbolic::parse("!$%&*+-./;<=>?`|~").should == Symbolic["!$%&*+-./;<=>?`|~"]
+				Symbolic::parse("!$%&*+-./;<=>?`|~safs").should == Symbolic["!$%&*+-./;<=>?`|~"]
+				Symbolic::parse("!$%&*+-./;<=>?`|~,").should == Symbolic["!$%&*+-./;<=>?`|~"]
+				Symbolic::parse("!$%&*+-./;<=>?`|~3432").should == Symbolic["!$%&*+-./;<=>?`|~"]
 			end
 		end
 
@@ -104,32 +108,23 @@ describe Channel::Parser do
 			end
 		end
 		
-		describe Reference do
-			it "should accept a $ value" do
-				Reference::parse(%Q{$blah}).should == Reference['$', %Q{blah}]
-			end
-			it "should accept an @ value" do
-				Reference::parse(%Q{@blah}).should == Reference['@', %Q{blah}]
-			end
-		end
-		
 		describe Tuple do
 			it "should create an empty tuple from an empty string" do
 				Tuple::parse(%Q{}, :file, "\n", nil).should == Tuple[:file, []]
 			end
 			it "should create a single value tuple from any of the scalar subtypes" do
 				Tuple::parse(%Q{blah}, :file, "\n", nil).should == Tuple[:file, [BareWord['blah']]]
+				Tuple::parse(%Q{11.2}, :file, "\n", nil).should == Tuple[:file, [Number['11.2']]]
+				Tuple::parse(%Q{<<}, :file, "\n", nil).should == Tuple[:file, [Symbolic['<<']]]
 				Tuple::parse(%Q{"blah"}, :file, "\n", nil).should == Tuple[:file, [StringConstant['"', 'blah']]]
 				Tuple::parse(%Q{'blah'}, :file, "\n", nil).should == Tuple[:file, [StringConstant["'", 'blah']]]
-				Tuple::parse(%Q{$blah}, :file, "\n", nil).should == Tuple[:file, [Reference['$', 'blah']]]
-				Tuple::parse(%Q{@blah}, :file, "\n", nil).should == Tuple[:file, [Reference['@', 'blah']]]
 			end
 			it "should be able to have TupleSets within it" do
 				Tuple::parse(%Q|()|, :file, "\n", nil).should == Tuple[:file, [TupleSet[:comma, []]]]
 				Tuple::parse(%Q|{}|, :file, "\n", nil).should == Tuple[:file, [TupleSet[:line, []]]]
 			end
 			it "should create composite tuples from multiple values" do
-				Tuple::parse(%Q{blah "blah" $blorp}, :file, "\n", nil).should == Tuple[:file, [BareWord['blah'], StringConstant['"', 'blah'], Reference['$', 'blorp']]]
+				Tuple::parse(%Q{blah "blah" 11.5}, :file, "\n", nil).should == Tuple[:file, [BareWord['blah'], StringConstant['"', 'blah'], Number['11.5']]]
 			end
 			it "should ignore leading and trailing whitespace" do
 			  Tuple::parse(%Q{   blah\tblorp }, :file, "\n", nil).should == Tuple[:file, [BareWord['blah'], BareWord['blorp']]]
@@ -240,9 +235,9 @@ describe Channel::Parser do
 					     Label[
 					      TupleSet[:comma, [
 					       Tuple[:comma, [
-					        Reference['$', 'arg1'],
-					        BareWord['=='],
-					        Reference['$', 'arg2']
+					        Symbolic['$'], BareWord['arg1'],
+					        Symbolic['=='],
+					        Symbolic['$'], BareWord['arg2']
 					       ]]
 					      ]],
 					      TupleSet[:line, [
@@ -263,7 +258,7 @@ describe Channel::Parser do
 					        BareWord['echo'],
 					        TupleSet[:comma, [
 					         Tuple[:comma, [
-					          Reference['$', 'arg3']
+					          Symbolic['$'], BareWord['arg3']
 					         ]]
 					        ]]
 					       ]]
@@ -282,7 +277,7 @@ describe Channel::Parser do
 					 Tuple[:file, [
 					  BareWord['var'],
 					  BareWord['x'],
-					  BareWord['='],
+					  Symbolic['='],
 					  BareWord['proc'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
@@ -296,7 +291,7 @@ describe Channel::Parser do
 					     BareWord['echo'],
 					     TupleSet[:comma, [
 					      Tuple[:comma, [
-					       Reference['$', 'arg']
+					       Symbolic['$'], BareWord['arg']
 					      ]]
 					     ]]
 					    ]]
@@ -304,8 +299,8 @@ describe Channel::Parser do
 					  ]
 					 ]],
 					 Tuple[:file, [
-					  Reference['$', 'x'],
-					  BareWord['.'],
+					  Symbolic['$'], BareWord['x'],
+					  Symbolic['.'],
 					  BareWord['call'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
@@ -314,7 +309,7 @@ describe Channel::Parser do
 					  ]]
 					 ]],
 					 Tuple[:file, [
-					  Reference['$', 'x'],
+					  Symbolic['$'], BareWord['x'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
 					    StringConstant['"', 'blah']
@@ -351,14 +346,14 @@ describe Channel::Parser do
 					        BareWord['echo'],
 					        TupleSet[:comma, [
 					         Tuple[:comma, [
-					          Reference['$', 'arg1']
+					          Symbolic['$'], BareWord['arg1']
 					         ]]
 					        ]]
 					       ]],
 					       Tuple[:line, [
-					        Reference['@', 'tmp'],
-					        BareWord['='],
-					        Reference['$', 'arg2']
+					        Symbolic['@'], BareWord['tmp'],
+					        Symbolic['='],
+					        Symbolic['$'], BareWord['arg2']
 					       ]]
 					      ]]
 					     ]
@@ -376,7 +371,7 @@ describe Channel::Parser do
 					        BareWord['echo'],
 					        TupleSet[:comma, [
 					         Tuple[:comma, [
-					          Reference['@', 'tmp']
+					          Symbolic['@'], BareWord['tmp']
 					         ]]
 					        ]]
 					       ]]
@@ -389,14 +384,14 @@ describe Channel::Parser do
 					 Tuple[:file, [
 					  BareWord['var'],
 					  BareWord['x'],
-					  BareWord['='],
+					  Symbolic['='],
 					  BareWord['Blah'],
-					  BareWord['.'],
+					  Symbolic['.'],
 					  BareWord['new']
 					 ]],
 					 Tuple[:file, [
-					  Reference['$', 'x'],
-					  BareWord['.'],
+					  Symbolic['$'], BareWord['x'],
+					  Symbolic['.'],
 					  BareWord['blah'],
 					  TupleSet[:comma, [
 					   Tuple[:comma, [
@@ -408,8 +403,8 @@ describe Channel::Parser do
 					  ]]
 					 ]],
 					 Tuple[:file, [
-					  Reference['$', 'x'],
-					  BareWord['.'],
+					  Symbolic['$'], BareWord['x'],
+					  Symbolic['.'],
 					  BareWord['blorp'],
 					  TupleSet[:comma, [
 
