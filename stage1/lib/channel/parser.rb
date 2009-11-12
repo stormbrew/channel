@@ -23,6 +23,12 @@ class Array
 	end
 end
 
+class NilClass
+	def inspect_r(l=0)
+		" "*l + "nil"
+	end
+end
+
 module Channel
  	module Parser	
 		# base class for parse tree nodes provides

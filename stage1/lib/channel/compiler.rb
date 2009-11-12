@@ -16,8 +16,8 @@ module Channel
 		OperatorInfo = Struct.new(:token, :precedence, :associativity, :arity, :method)
 		pc = 0
 		Operators = {
-			[2, '.'] => OperatorInfo['.', pc, :rtl, 2, nil], # uses rhs
-			[1, '.'] => OperatorInfo['.', pc, :rtl, 1, nil], # uses rhs
+			[2, '.'] => OperatorInfo['.', pc, :ltr, 2, nil], # uses rhs
+			[1, '.'] => OperatorInfo['.', pc, :ltr, 1, nil], # uses rhs
 			[1, '+'] => OperatorInfo['+', pc+=1, :rtl, 1, Parser::Symbolic["+"]],
 			[1, '-'] => OperatorInfo['-', pc, :rtl, 1, Parser::Symbolic["-"]],
 			[1, '!'] => OperatorInfo['!', pc, :rtl, 1, Parser::BareWord["nil?"]],
@@ -56,7 +56,7 @@ module Channel
 				return Operators[[arity, text]]
 			end
 			def inspect_r(l = 0)
-				return %Q{OperatorInfo[#{arity}, #{token.inspect_r}]}
+				return %Q{#{" "*l}OperatorInfo[#{arity}, #{text.inspect_r}]}
 			end
 		end
 		
@@ -64,6 +64,9 @@ module Channel
 		class OperatorNode
 			def info()
 				OperatorInfo[arity, token.string]
+			end
+			def inspect_r(l = 0)
+				return %Q{#{" "*l}OperatorNode[#{arity}, #{token.inspect_r}]}
 			end
 		end
 		
@@ -163,6 +166,14 @@ module Channel
 					Statement.compile(tuple)
 				}
 			end
+			
+			def inspect_r(l = 0)
+				t = " "*l
+				s = ""
+				s << t << "Block[\n"
+				s << statements.collect {|i| i.inspect_r(l+1) }.join(",\n") << "\n"
+				s << t << "]"
+			end
 		end
 		
 		# A statement is a single 'action' as defined by the author of the
@@ -186,8 +197,15 @@ module Channel
 				@root_expr = Expression.precompile(parser, output)
 				
 				if (!output.empty?)
-					raise CompilerError(parser), "Statement contained values that the compiler couldn't consume."
+					raise CompilerError.new(parser), "Statement contained values that the compiler couldn't consume:\n" + output.inspect_r(1) + "\nCompiled tree:\n" + @root_expr.inspect_r(1)
 				end
+			end
+			def inspect_r(l = 0)
+				t = " "*l
+				s = ""
+				s << t << "Statement[\n"
+				s << @root_expr.inspect_r(l+1) << "\n"
+				s << t << "]"
 			end
 		end
 		
@@ -246,11 +264,6 @@ module Channel
 					# invocations in that their operands *are* compiled immediately.
 					# without this, there'd be ANARCHY I tells ya.
 					if (first.info.method.nil?) # method invokation, @method will be the first value on the rhs.
-						if (first.arity == 1) # self-method, @target is nil
-							@target = nil
-						else
-							@target = Expression.precompile(first.token, @compiled_terms)
-						end
 						# get the rhs
 						rhs = @compiled_terms.shift
 						if (rhs.kind_of?(Array) && (rhs.first.kind_of?(Parser::BareWord) || rhs.first.kind_of?(Parser::Symbolic)))
@@ -259,13 +272,27 @@ module Channel
 						else
 							raise CompilerError.new(first.token), "Unexpected right hand side to method invoke. Must be a BareWord or Symbolic, got #{rhs.inspect}."
 						end
+						if (first.arity == 1) # self-method, @target is nil
+							@target = nil
+						else
+							@target = Expression.precompile(first.token, @compiled_terms)
+						end
 					else # normal operator
 						@target = Expression.precompile(first.token, @compiled_terms)
-						@method = Parser::parse(first.method)
+						@method = first.info.method
 						if (first.arity > 1)
 							@args = Expression.precompile(first.token, @compiled_terms)
 						end
 					end
+				end
+				def inspect_r(l = 0)
+					t = " "*l
+					s = ""
+					s << t << "Expression[\n"
+					s << target.inspect_r(l+1) << ",\n"
+					s << method.inspect_r(l+1) << ",\n"
+					s << args.inspect_r(l+1) << "\n"
+					s << t << "]"
 				end
 			end
 			
@@ -285,6 +312,13 @@ module Channel
 				
 				def compile()
 					@value = parser
+				end
+				def inspect_r(l = 0)
+					t = " "*l
+					s = ""
+					s << t << "Value[\n"
+					s << value.inspect_r(l+1) << "\n"
+					s << t << "]"
 				end
 			end
 		end
