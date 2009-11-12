@@ -15,4 +15,4 @@ else
 	tree = Channel::Parser::Tree.parse($stdin)
 end
 
-puts tree.inspect_r
+puts tree.compile.inspect_r
