@@ -152,6 +152,9 @@ module Channel
 			def initialize(*statements)
 				@statements = statements
 			end
+			def ==(other)
+				other.kind_of?(Block) && @statements == other.statements
+			end
 			def compile()
 				if (!parser.kind_of?(Parser::TupleSet))
 					raise CompilerError.new(parser), "Block compiler expected a TupleSet, got #{parser.class}"
@@ -170,6 +173,9 @@ module Channel
 			
 			def initialize(root_expr = nil)
 				@root_expr = root_expr
+			end
+			def ==(other)
+				other.kind_of?(Statement) && other.root_expr == root_expr
 			end
 			def compile()
 				if (!parser.kind_of?(Parser::Tuple))
@@ -197,6 +203,9 @@ module Channel
 				@target = target
 				@method = method
 				@args = args
+			end
+			def ==(other)
+				other.kind_of?(Expression) && other.target = target && other.method == method && other.args == args
 			end
 			def initialize_compiler(parser, compiled_terms)
 				super(parser)
@@ -268,6 +277,10 @@ module Channel
 				
 				def initialize(value = nil)
 					@value = value
+				end
+				
+				def ==(other)
+					other.kind_of?(Value) && other.value == value
 				end
 				
 				def compile()
