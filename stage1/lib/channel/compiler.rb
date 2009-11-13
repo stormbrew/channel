@@ -16,8 +16,8 @@ module Channel
 		OperatorInfo = Struct.new(:token, :precedence, :associativity, :arity, :method)
 		pc = 0
 		Operators = {
-			[2, '.'] => OperatorInfo['.', pc, :ltr, 2, nil], # uses rhs
-			[1, '.'] => OperatorInfo['.', pc, :ltr, 1, nil], # uses rhs
+			[2, '.'] => OperatorInfo['.', pc, :rtl, 2, nil], # uses rhs
+			[1, '.'] => OperatorInfo['.', pc, :rtl, 1, nil], # uses rhs
 			[1, '+'] => OperatorInfo['+', pc+=1, :rtl, 1, Parser::Symbolic["+"]],
 			[1, '-'] => OperatorInfo['-', pc, :rtl, 1, Parser::Symbolic["-"]],
 			[1, '!'] => OperatorInfo['!', pc, :rtl, 1, Parser::BareWord["nil?"]],
@@ -94,8 +94,7 @@ module Channel
 				op_stack = []
 				output = []
 				
-				# this is an implementation of the shunting yard algorithm. Note that it
-				# outputs a polish notation, not reverse polish notation. The resulting
+				# this is an implementation of the shunting yard algorithm. The resulting
 				# stack is consumed below into an actual execution graph.
 				unary = true
 				escape_operator = false
@@ -109,30 +108,30 @@ module Channel
 							while (last_op &&
 								     ((op_info.associativity == :ltr && op_info.precedence >= last_op.info.precedence) ||
 							       (op_info.associativity == :rtl && op_info.precedence > last_op.info.precedence)))
-								output.unshift(op_stack.pop)
+								output.push(op_stack.pop)
 								last_op = op_stack.last
 							end
 						end
 						op_stack.push(OperatorNode[op_info.arity, val])
-						output.unshift(nil) # we're done a 'term' of the parse, so push a nil to act as a sequence point
+						output.push(nil) # we're done a 'term' of the parse, so push a nil to act as a sequence point
 						unary = true # operator after operator is unary
 					else
 						if (val == Parser::BareWord['operator'])
 							escape_operator = true
-						elsif (output.first.kind_of? Array)
-							output.first.push(val)
+						elsif (output.last.kind_of? Array)
+							output.last.push(val)
 							escape_operator = false
 						else
-							output.unshift([val])
+							output.push([val])
 							escape_operator = false
 						end
 						unary = false # operator after value is binary
 					end
 				}
 				while (!op_stack.empty?)
-					output.unshift(op_stack.pop)
+					output.push(op_stack.pop)
 				end
-				return output.compact # remove nil sentinels.
+				output.compact # remove nil sentinels.
 			end
 			
 			def Compiler.compile(parser, *context)
@@ -193,11 +192,30 @@ module Channel
 					raise CompilerError.new(parser), "Statement compiler expected a Tuple, got #{parser.class}"
 				end
 
+				stack = []
 				output = Compiler.reorder_operators(parser)
-				@root_expr = Expression.precompile(parser, output)
+				output.each {|node|
+					if (!node.kind_of?(Array))
+						stack.push(Expression.compile(parser, node, stack))
+					else
+						stack.push(node)
+					end
+				}
 				
-				if (!output.empty?)
-					raise CompilerError.new(parser), "Statement contained values that the compiler couldn't consume:\n" + output.inspect_r(1) + "\nCompiled tree:\n" + @root_expr.inspect_r(1)
+				if (stack.length != 1)
+					raise CompilerError.new(parser), "Statement did not produce a single expression. Parse stack:\n#{stack.inspect_r(1)}"
+				end
+				
+				if (stack.first.kind_of?(Array))
+					node = stack.first
+					case node.first
+					when Parser::BareWord, Parser::Symbolic
+						@root_expr = Expression.compile(node.first, node)
+					else
+						@root_expr = Value.compile(node.shift)
+					end
+				else
+					@root_expr = stack.pop
 				end
 			end
 			def inspect_r(l = 0)
@@ -225,101 +243,105 @@ module Channel
 			def ==(other)
 				other.kind_of?(Expression) && other.target = target && other.method == method && other.args == args
 			end
-			def initialize_compiler(parser, compiled_terms)
+			def initialize_compiler(parser, node, arg_stack = [])
 				super(parser)
-				@compiled_terms = compiled_terms
-			end
-			
-			# does an initial step to determine if this is actually
-			# an expression or a value and then does the compile step.
-			def Expression.precompile(parser, output)
-				if (!output.first.kind_of?(Array) || 
-					  output.first.first.kind_of?(Parser::BareWord) ||
-					  output.first.first.kind_of?(Parser::Symbolic))
-					return Expression.compile(parser, output)
-				else
-					val = output.first.shift
-					if (!output.first.empty?)
-						raise CompilerError(val), "Value expression had more than one term"
-					end
-					return Value.compile(val)
-				end
+				@node = node
+				@arg_stack = arg_stack
 			end
 			
 			def compile()
 				# if the first term is an array, that means
 				# it's a plain old self-directed method call.
 				# (ie. equiv to self.methodname)
-				first = @compiled_terms.shift
-				if (first.kind_of?(Array))
+				if (@node.kind_of?(Array))
 					@target = nil
-					@method = first.shift
+					@method = @node.shift
 					# note that method args are always parsed as values and not
 					# compiled. That's up to the method to deal with (but
 					# from an end user perspective, it will be taken care of
 					# by the runtime most of the time)
-					@args = first.collect {|arg| Value.compile(arg) }
-				elsif (first.kind_of?(OperatorNode))
+					@args = @node.collect {|arg| Value.compile(arg) }
+				elsif (@node.kind_of?(OperatorNode))
 					# operators (including .) work differently from bare method
 					# invocations in that their operands *are* compiled immediately.
 					# without this, there'd be ANARCHY I tells ya.
-					if (first.info.method.nil?) # method invokation, @method will be the first value on the rhs.
-						# get the rhs
-						rhs = @compiled_terms.shift
-						if (rhs.kind_of?(Array) && (rhs.first.kind_of?(Parser::BareWord) || rhs.first.kind_of?(Parser::Symbolic)))
-							@method = rhs.shift
-							@args = rhs.collect {|arg| Value.compile(arg) }
-						else
-							raise CompilerError.new(first.token), "Unexpected right hand side to method invoke. Must be a BareWord or Symbolic, got #{rhs.inspect}."
-						end
-						if (first.arity == 1) # self-method, @target is nil
+					if (@node.info.method.nil?) # method invokation, @method will be the first value on the rhs.
+						if (@node.arity == 1) # self-method, @target is nil
 							@target = nil
 						else
-							@target = Expression.precompile(first.token, @compiled_terms)
+							@target = dispatch_value(@arg_stack.pop || raise(CompilerError.new(@node.token), "Could not parse method call with no target."))
+						end
+						# get the rhs
+						rhs = @arg_stack.pop
+						if (rhs.kind_of?(Array) && (rhs.first.kind_of?(Parser::BareWord) || rhs.first.kind_of?(Parser::Symbolic)))
+							@method = rhs.pop
+							@args = rhs.collect {|arg| Value.compile(arg) }
+						else
+							raise CompilerError.new(@node.token), "Unexpected right hand side to method invoke. Must be a BareWord or Symbolic, got:\n#{rhs.inspect_r(1)}."
 						end
 					else # normal operator
-						@target = Expression.precompile(first.token, @compiled_terms)
-						@method = first.info.method
-						if (first.arity > 1)
-							@args = Expression.precompile(first.token, @compiled_terms)
+						@target = dispatch_value(@arg_stack.pop || raise(CompilerError.new(@node.token), "Could not parse method call with no target."))
+						@method = @node.info.method
+						if (@node.arity == 2)
+							@args = [dispatch_value(@arg_stack.pop || raise(CompilerError.new(@node.token), "Could not parse method call with no target."))]
 						end
 					end
 				end
-				def inspect_r(l = 0)
-					t = " "*l
-					s = ""
-					s << t << "Expression[\n"
-					s << target.inspect_r(l+1) << ",\n"
-					s << method.inspect_r(l+1) << ",\n"
-					s << args.inspect_r(l+1) << "\n"
-					s << t << "]"
-				end
 			end
 			
-			# A value is like an expression, but rather than being a
-			# method call is some kind of a constant value embedded in the code.
-			# ie. a string constant.
-			class Value < Compiler
-				attr_reader :value
-				
-				def initialize(value = nil)
-					@value = value
+			# this is to deal with the fact that under certain
+			# circumstances, what looks like a value is actually a method
+			def dispatch_value(node)
+				if (node.kind_of?(Array))
+					if (node.first.kind_of?(Parser::BareWord) || node.first.kind_of?(Parser::Symbolic))
+						return Expression.compile(parser, node, [])
+					else
+						val = node.shift
+						if (!node.empty?)
+							raise CompilerError(val), "Value expression had more than one term"
+						end
+						return Value.compile(val)
+					end
+				else
+					return node
 				end
-				
-				def ==(other)
-					other.kind_of?(Value) && other.value == value
-				end
-				
-				def compile()
-					@value = parser
-				end
-				def inspect_r(l = 0)
-					t = " "*l
-					s = ""
-					s << t << "Value[\n"
-					s << value.inspect_r(l+1) << "\n"
-					s << t << "]"
-				end
+			end
+					
+			
+			def inspect_r(l = 0)
+				t = " "*l
+				s = ""
+				s << t << "Expression[\n"
+				s << target.inspect_r(l+1) << ",\n"
+				s << method.inspect_r(l+1) << ",\n"
+				s << args.inspect_r(l+1) << "\n"
+				s << t << "]"
+			end
+		end
+		
+		# A value is like an expression, but rather than being a
+		# method call is some kind of a constant value embedded in the code.
+		# ie. a string constant.
+		class Value < Compiler
+			attr_reader :value
+			
+			def initialize(value = nil)
+				@value = value
+			end
+			
+			def ==(other)
+				other.kind_of?(Value) && other.value == value
+			end
+			
+			def compile()
+				@value = parser
+			end
+			def inspect_r(l = 0)
+				t = " "*l
+				s = ""
+				s << t << "Value[\n"
+				s << value.inspect_r(l+1) << "\n"
+				s << t << "]"
 			end
 		end
 	end
