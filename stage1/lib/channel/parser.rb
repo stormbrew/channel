@@ -262,24 +262,20 @@ module Channel
 		# A string constant is a quoted string of arbitrary length and
 		# content. It's surrounded by either "s or 's.
 		class StringConstant < Node
-			def string
-				@string.string
-			end
-			attr_reader :type
+			attr_reader :type, :string
 			
 			def self.map_terminator(char)
 				char.tr('{([', '})]') # these three, give their opposite. Otherwise, leave it the same.
 			end
 			
 			def initialize(type = '"', string = "")
-				@string = StringIO.new
-				@string << string
+				@string = string
 				@type = type
 			end
 			def initialize_parser()
 				@type = :unknown
 				@terminator = nil
-				@string = StringIO.new()
+				@string = ""
 				@escape = false
 			end
 			def ==(other)
