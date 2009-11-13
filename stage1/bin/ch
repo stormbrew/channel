@@ -3,7 +3,7 @@ if ($0 =~ %r{bin/ch$})
   $: << "lib"
 end
 
-require 'channel/parser'
+require 'channel'
 
 tree = nil
 
