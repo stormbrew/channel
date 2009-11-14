@@ -20,7 +20,7 @@ module Channel
 			[1, '.'] => OperatorInfo['.', pc, :rtl, 1, nil], # uses rhs
 			[1, '+'] => OperatorInfo['+', pc+=1, :rtl, 1, Parser::Symbolic["+"]],
 			[1, '-'] => OperatorInfo['-', pc, :rtl, 1, Parser::Symbolic["-"]],
-			[1, '!'] => OperatorInfo['!', pc, :rtl, 1, Parser::BareWord["nil?"]],
+			[1, '!'] => OperatorInfo['!', pc, :rtl, 1, Parser::Symbolic["!"]],
 			[1, '~'] => OperatorInfo['~', pc, :rtl, 1, Parser::Symbolic["~"]], # not sure what this'll do yet.
 			[1, '*'] => OperatorInfo['*', pc, :rtl, 1, Parser::BareWord["expand"]], # needs special processing
 			[2, '*'] => OperatorInfo['*', pc+=1, :ltr, 2, Parser::Symbolic["*"]],
@@ -68,6 +68,9 @@ module Channel
 			end
 			def inspect_r(l = 0)
 				return %Q{#{" "*l}OperatorNode[#{arity}, #{token.inspect_r}]}
+			end
+			def ==(other)
+				other.kind_of?(OperatorNode) && other.arity == arity && other.token == token
 			end
 		end
 		
@@ -133,6 +136,30 @@ module Channel
 					output.push(op_stack.pop)
 				end
 				output.compact # remove nil sentinels.
+			end
+			def reorder_operators(parser)
+				self.class.reorder_operators(parser)
+			end
+			
+			# this is to deal with the fact that under certain
+			# circumstances, what looks like a value is actually a method
+			def Compiler.dispatch_value(parser, node)
+				if (node.kind_of?(Array))
+					if (node.first.kind_of?(Parser::BareWord) || node.first.kind_of?(Parser::Symbolic))
+						return Expression.compile(parser, node, [])
+					else
+						val = node.shift
+						if (!node.empty?)
+							raise CompilerError.new(val), "Value expression had more than one term"
+						end
+						return Value.compile(val)
+					end
+				else
+					return node
+				end
+			end
+			def dispatch_value(parser, node)
+				self.class.dispatch_value(parser, node)
 			end
 			
 			def Compiler.compile(parser, *context)
@@ -208,13 +235,7 @@ module Channel
 				end
 				
 				if (stack.first.kind_of?(Array))
-					node = stack.first
-					case node.first
-					when Parser::BareWord, Parser::Symbolic
-						@root_expr = Expression.compile(node.first, node)
-					else
-						@root_expr = Value.compile(node.shift)
-					end
+					@root_expr = dispatch_value(parser, stack.shift)
 				else
 					@root_expr = stack.pop
 				end
@@ -242,7 +263,7 @@ module Channel
 				@args = args
 			end
 			def ==(other)
-				other.kind_of?(Expression) && other.target = target && other.method == method && other.args == args
+				other.kind_of?(Expression) && other.target == target && other.method == method && other.args == args
 			end
 			def initialize_compiler(parser, node, arg_stack = [])
 				super(parser)
@@ -263,6 +284,10 @@ module Channel
 					# by the runtime most of the time)
 					@args = @node.collect {|arg| Value.compile(arg) }
 				elsif (@node.kind_of?(OperatorNode))
+					args = @arg_stack.slice!(-@node.arity, @node.arity)
+					if (args.length != @node.arity)
+						raise CompilerError.new(@node.token), "Wrong number of arguments for operator #{@node.token.string}"
+					end
 					# operators (including .) work differently from bare method
 					# invocations in that their operands *are* compiled immediately.
 					# without this, there'd be ANARCHY I tells ya.
@@ -270,10 +295,10 @@ module Channel
 						if (@node.arity == 1) # self-method, @target is nil
 							@target = nil
 						else
-							@target = dispatch_value(@arg_stack.pop || raise(CompilerError.new(@node.token), "Could not parse method call with no target."))
+							@target = dispatch_value(parser, args.shift)
 						end
 						# get the rhs
-						rhs = @arg_stack.pop
+						rhs = args.shift
 						if (rhs.kind_of?(Array) && (rhs.first.kind_of?(Parser::BareWord) || rhs.first.kind_of?(Parser::Symbolic)))
 							@method = rhs.pop
 							@args = rhs.collect {|arg| Value.compile(arg) }
@@ -281,34 +306,15 @@ module Channel
 							raise CompilerError.new(@node.token), "Unexpected right hand side to method invoke. Must be a BareWord or Symbolic, got:\n#{rhs.inspect_r(1)}."
 						end
 					else # normal operator
-						@target = dispatch_value(@arg_stack.pop || raise(CompilerError.new(@node.token), "Could not parse method call with no target."))
+						@target = dispatch_value(parser, args.shift)
 						@method = @node.info.method
 						if (@node.arity == 2)
-							@args = [dispatch_value(@arg_stack.pop || raise(CompilerError.new(@node.token), "Could not parse method call with no target."))]
+							@args = [dispatch_value(parser, args.shift)]
 						end
 					end
 				end
 			end
-			
-			# this is to deal with the fact that under certain
-			# circumstances, what looks like a value is actually a method
-			def dispatch_value(node)
-				if (node.kind_of?(Array))
-					if (node.first.kind_of?(Parser::BareWord) || node.first.kind_of?(Parser::Symbolic))
-						return Expression.compile(parser, node, [])
-					else
-						val = node.shift
-						if (!node.empty?)
-							raise CompilerError(val), "Value expression had more than one term"
-						end
-						return Value.compile(val)
-					end
-				else
-					return node
-				end
-			end
-					
-			
+						
 			def inspect_r(l = 0)
 				t = " "*l
 				s = ""
